@@ -1,0 +1,52 @@
+# Airtable Lakeflow Connector - Python Dependencies
+
+# Core Dependencies
+pyspark>=3.5.0
+delta-spark>=3.0.0
+databricks-connect>=14.0.0
+databricks-sdk>=0.18.0
+
+# Airtable API Client
+pyairtable>=2.3.0           # Official Airtable Python SDK
+requests>=2.31.0            # HTTP requests
+requests-cache>=1.1.0       # API request caching
+
+# Data Processing
+pandas>=2.1.0              # Data manipulation
+numpy>=1.24.0              # Numerical operations
+python-dateutil>=2.8.0     # Date parsing
+
+# Configuration & Environment
+python-dotenv>=1.0.0       # Environment variable management
+pyyaml>=6.0.1              # YAML configuration files
+
+# Validation & Schema
+pydantic>=2.5.0            # Data validation
+jsonschema>=4.20.0         # JSON schema validation
+
+# Logging & Monitoring
+structlog>=23.0.0          # Structured logging
+tenacity>=8.2.0            # Retry logic with exponential backoff
+
+# Testing (Development)
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.12.0
+pytest-cov>=4.1.0
+responses>=0.24.0          # Mock HTTP responses
+
+# Development Tools
+black>=23.0.0              # Code formatting
+flake8>=6.1.0              # Linting
+mypy>=1.7.0                # Type checking
+pre-commit>=3.5.0          # Git hooks
+
+# Optional: Enhanced Features
+typing-extensions>=4.8.0   # Extended type hints
+attrs>=23.1.0              # Classes without boilerplate
+
+# API Backend (Flask)
+flask>=3.0.0              # Web framework
+flask-cors>=4.0.0         # CORS support for API
+gunicorn>=21.2.0          # Production WSGI server
+
