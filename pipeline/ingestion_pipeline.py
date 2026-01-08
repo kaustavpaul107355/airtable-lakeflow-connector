@@ -96,25 +96,41 @@ def _get_table_metadata(spark, connection_name: str, table_list: list[str]) -> d
     """Get metadata for all tables in the pipeline"""
     metadata = {}
     
-    # Read metadata from the connector
-    metadata_df = (
-        spark.read.format("lakeflow_connect")
-        .option("databricks.connection", connection_name)
-        .option("get_metadata", "true")
-        .load()
-    )
-    
-    # Filter for requested tables
-    metadata_df = metadata_df.filter(col("tableName").isin(table_list))
-    
-    for row in metadata_df.collect():
-        table_metadata = {
-            "primary_keys": row["primaryKeys"] if "primaryKeys" in row else [],
-            "cursor_field": row["cursorField"] if "cursorField" in row else None,
-            "ingestion_type": row["ingestionType"] if "ingestionType" in row else "cdc",
-        }
+    # Try to read metadata from the connector if supported
+    try:
+        metadata_df = (
+            spark.read.format("lakeflow_connect")
+            .option("databricks.connection", connection_name)
+            .option("get_metadata", "true")
+            .load()
+        )
+        
+        # Filter for requested tables
+        metadata_df = metadata_df.filter(col("tableName").isin(table_list))
+        
+        for row in metadata_df.collect():
+            table_metadata = {
+                "primary_keys": row["primaryKeys"] if "primaryKeys" in row else [],
+                "cursor_field": row["cursorField"] if "cursorField" in row else None,
+                "ingestion_type": row["ingestionType"] if "ingestionType" in row else "snapshot",
+            }
 
-        metadata[row["tableName"]] = table_metadata
+            metadata[row["tableName"]] = table_metadata
+    except Exception:
+        # Metadata not supported by this connector - use defaults
+        # All tables will default to snapshot ingestion with no primary keys
+        # These can be overridden in the pipeline spec
+        pass
+    
+    # Fill in default metadata for tables that don't have it
+    for table in table_list:
+        if table not in metadata:
+            metadata[table] = {
+                "primary_keys": [],
+                "cursor_field": None,
+                "ingestion_type": "snapshot",  # Default to snapshot ingestion
+            }
+    
     return metadata
 
 
