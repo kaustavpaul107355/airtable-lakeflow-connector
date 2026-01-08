@@ -4,7 +4,23 @@ A production-ready Databricks Lakeflow connector for ingesting data from Airtabl
 
 **Status:** ✅ Implementation Complete - Ready for Official Tool Integration  
 **Framework:** [Databricks Lakeflow Community Connectors](https://github.com/databrickslabs/lakeflow-community-connectors)  
-**Last Updated:** January 7, 2026
+**Last Updated:** January 8, 2026
+
+---
+
+## ⚠️ **IMPORTANT: Two Deployment Modes**
+
+This connector supports both **local testing** and **Databricks deployment**:
+
+| File | Purpose | Where to Use |
+|------|---------|--------------|
+| **`ingest.py`** | Local testing with mock Spark | 💻 Your local machine |
+| **`ingest_databricks.py`** | Databricks deployment | ☁️ Databricks workspace |
+
+**Common Error:** Running `ingest.py` in Databricks causes `NameError: name '__file__' is not defined`  
+**Solution:** Use `ingest_databricks.py` for Databricks deployment!
+
+See [DATABRICKS_DEPLOYMENT.md](./DATABRICKS_DEPLOYMENT.md) for complete deployment instructions.
 
 ---
 
