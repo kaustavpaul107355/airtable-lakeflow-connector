@@ -149,7 +149,11 @@ def ingest(spark, pipeline_spec: dict) -> None:
         primary_keys = metadata[table].get("primary_keys")
         cursor_field = metadata[table].get("cursor_field")
         ingestion_type = metadata[table].get("ingestion_type", "cdc")
-        view_name = table + "_staging"
+        
+        # Sanitize table name for SQL identifiers (replace spaces and special chars)
+        sanitized_table = table.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")
+        view_name = sanitized_table + "_staging"
+        
         table_config = spec.get_table_configuration(table)
         destination_table = spec.get_full_destination_table_name(table)
 
