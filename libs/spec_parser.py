@@ -3,6 +3,7 @@
 # pylint: disable=too-few-public-methods
 from typing import List, Dict, Any, Optional
 import json
+import re
 
 from pydantic import (
     BaseModel,
@@ -24,6 +25,54 @@ SCD_TYPE_1 = "SCD_TYPE_1"
 SCD_TYPE_2 = "SCD_TYPE_2"
 APPEND_ONLY = "APPEND_ONLY"
 VALID_SCD_TYPES = {SCD_TYPE_1, SCD_TYPE_2, APPEND_ONLY}
+
+
+def sanitize_table_name(table_name: str) -> str:
+    """
+    Sanitize table name to be a valid SQL identifier.
+    
+    Converts spaces and special characters to underscores, removes invalid characters,
+    and ensures the name doesn't start with a digit.
+    
+    Args:
+        table_name: Original table name (may contain spaces, special chars)
+    
+    Returns:
+        Sanitized table name safe for use as SQL identifier
+    
+    Examples:
+        "Packaging Tasks" -> "packaging_tasks"
+        "My-Table (2024)" -> "my_table_2024"
+        "Creative Requests" -> "creative_requests"
+    """
+    if not table_name:
+        return table_name
+    
+    # Convert to lowercase
+    sanitized = table_name.lower()
+    
+    # Replace spaces, hyphens, and common separators with underscores
+    sanitized = sanitized.replace(" ", "_").replace("-", "_")
+    
+    # Remove parentheses and brackets
+    sanitized = sanitized.replace("(", "").replace(")", "")
+    sanitized = sanitized.replace("[", "").replace("]", "")
+    sanitized = sanitized.replace("{", "").replace("}", "")
+    
+    # Remove other special characters (keep only alphanumeric and underscore)
+    sanitized = re.sub(r'[^a-z0-9_]', '_', sanitized)
+    
+    # Replace multiple consecutive underscores with single underscore
+    sanitized = re.sub(r'_+', '_', sanitized)
+    
+    # Remove leading/trailing underscores
+    sanitized = sanitized.strip('_')
+    
+    # Ensure it doesn't start with a digit
+    if sanitized and sanitized[0].isdigit():
+        sanitized = 'table_' + sanitized
+    
+    return sanitized
 
 
 class TableSpec(BaseModel):
@@ -284,8 +333,8 @@ class SpecParser:
         Returns:
             The full destination table name in the format
             'destination_catalog.destination_schema.destination_table',
-            or 'destination_catalog.destination_schema.table_name' if destination_table is
-            not specified, or table_name if destination_catalog or destination_schema is
+            or 'destination_catalog.destination_schema.sanitized_table_name' if destination_table is
+            not specified, or sanitized_table_name if destination_catalog or destination_schema is
             not specified.
 
         Raises:
@@ -295,7 +344,8 @@ class SpecParser:
             if obj.table.source_table == table_name:
                 catalog = obj.table.destination_catalog
                 schema = obj.table.destination_schema
-                table = obj.table.destination_table or table_name
+                # If destination_table is not specified, sanitize the source table name
+                table = obj.table.destination_table or sanitize_table_name(table_name)
 
                 if catalog is None or schema is None:
                     return table

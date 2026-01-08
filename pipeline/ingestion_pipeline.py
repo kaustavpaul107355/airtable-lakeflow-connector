@@ -2,7 +2,7 @@
 from typing import List
 from pyspark import pipelines as sdp
 from pyspark.sql.functions import col
-from libs.spec_parser import SpecParser
+from libs.spec_parser import SpecParser, sanitize_table_name
 
 
 def _create_cdc_table(
@@ -151,7 +151,7 @@ def ingest(spark, pipeline_spec: dict) -> None:
         ingestion_type = metadata[table].get("ingestion_type", "cdc")
         
         # Sanitize table name for SQL identifiers (replace spaces and special chars)
-        sanitized_table = table.replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "")
+        sanitized_table = sanitize_table_name(table)
         view_name = sanitized_table + "_staging"
         
         table_config = spec.get_table_configuration(table)
