@@ -96,12 +96,12 @@ def _get_table_metadata(spark, connection_name: str, table_list: list[str]) -> d
     """Get metadata for all tables in the pipeline"""
     metadata = {}
     
-    # Try to read metadata from the connector if supported
+    # Try to read metadata from the connector via the metadata table
     try:
         metadata_df = (
             spark.read.format("lakeflow_connect")
             .option("databricks.connection", connection_name)
-            .option("get_metadata", "true")
+            .option("tableName", "_lakeflow_metadata")  # Query metadata table
             .load()
         )
         
@@ -110,14 +110,14 @@ def _get_table_metadata(spark, connection_name: str, table_list: list[str]) -> d
         
         for row in metadata_df.collect():
             table_metadata = {
-                "primary_keys": row["primaryKeys"] if "primaryKeys" in row else [],
-                "cursor_field": row["cursorField"] if "cursorField" in row else None,
-                "ingestion_type": row["ingestionType"] if "ingestionType" in row else "snapshot",
+                "primary_keys": row["primary_keys"] if row["primary_keys"] else [],
+                "cursor_field": row["cursor_field"] if row["cursor_field"] else None,
+                "ingestion_type": row["ingestion_type"] if row["ingestion_type"] else "snapshot",
             }
 
             metadata[row["tableName"]] = table_metadata
     except Exception:
-        # Metadata not supported by this connector - use defaults
+        # Metadata query failed - use defaults
         # All tables will default to snapshot ingestion with no primary keys
         # These can be overridden in the pipeline spec
         pass
