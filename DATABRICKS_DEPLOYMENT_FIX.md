@@ -138,7 +138,7 @@ When uploading to Databricks:
 
 ```bash
 databricks workspace import-dir \
-  /Users/kaustav.paul/CursorProjects/Databricks/databricks-starter/databricks-apps/airtable-connector \
+  /Users/kaustav.paul/CursorProjects/Databricks/airtable-connector \
   /Users/kaustav.paul@databricks.com/airtable-connect-sdp/airtable-connect-sdp \
   --overwrite
 ```

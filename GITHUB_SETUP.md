@@ -45,7 +45,7 @@ Click here to create: [Create airtable-lakeflow-connector](https://github.com/ne
 Once the repository is created on GitHub, run this command:
 
 ```bash
-cd /Users/kaustav.paul/CursorProjects/Databricks/databricks-starter/databricks-apps/airtable-connector
+cd /Users/kaustav.paul/CursorProjects/Databricks/airtable-connector
 
 # Push to GitHub
 git push -u origin main

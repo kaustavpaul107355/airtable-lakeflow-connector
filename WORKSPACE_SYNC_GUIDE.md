@@ -163,7 +163,7 @@ If you want to use Git for version control and sync:
 
 ### 1. Initialize Git Repository (If Not Already)
 ```bash
-cd /Users/kaustav.paul/CursorProjects/Databricks/databricks-starter/databricks-apps/airtable-connector
+cd /Users/kaustav.paul/CursorProjects/Databricks/airtable-connector
 git init
 git add .
 git commit -m "Clean codebase: Production-ready Airtable connector"

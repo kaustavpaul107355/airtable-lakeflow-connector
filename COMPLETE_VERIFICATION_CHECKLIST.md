@@ -116,7 +116,7 @@ Verify:
 
 **Check Locally:**
 ```bash
-cd /Users/kaustav.paul/CursorProjects/Databricks/databricks-starter/databricks-apps/airtable-connector
+cd /Users/kaustav.paul/CursorProjects/Databricks/airtable-connector
 git remote -v
 git status
 git log --oneline -3
@@ -351,7 +351,7 @@ ls -la lakeflow-community-connectors/sources/
 Run these commands from your connector directory:
 
 ```bash
-cd /Users/kaustav.paul/CursorProjects/Databricks/databricks-starter/databricks-apps/airtable-connector
+cd /Users/kaustav.paul/CursorProjects/Databricks/airtable-connector
 
 echo "=== FILE STRUCTURE CHECK ==="
 find . -name "*.py" -type f | grep -v __pycache__ | grep -v ".git" | sort

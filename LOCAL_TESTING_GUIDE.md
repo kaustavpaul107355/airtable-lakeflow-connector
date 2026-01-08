@@ -21,7 +21,7 @@
 
 ```bash
 # Create virtual environment
-cd /Users/kaustav.paul/CursorProjects/Databricks/databricks-starter/databricks-apps/airtable-connector
+cd /Users/kaustav.paul/CursorProjects/Databricks/airtable-connector
 
 python3 -m venv venv
 source venv/bin/activate  # On Mac/Linux
@@ -397,7 +397,7 @@ ModuleNotFoundError: No module named 'pipeline'
 
 **Fix:** Make sure you're running from the connector directory and all `__init__.py` files exist:
 ```bash
-cd /Users/kaustav.paul/CursorProjects/Databricks/databricks-starter/databricks-apps/airtable-connector
+cd /Users/kaustav.paul/CursorProjects/Databricks/airtable-connector
 find . -name "__init__.py" | sort
 ```
 
