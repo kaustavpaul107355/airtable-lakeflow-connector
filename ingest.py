@@ -58,9 +58,10 @@ source_name = "airtable"
 # =============================================================================
 
 pipeline_spec = {
-    "connection_name": "airtable",  # UC connection name (must match CREATE CONNECTION)
-    "default_catalog": "main",      # ← UPDATE: Your target catalog
-    "default_schema": "default",    # ← UPDATE: Your target schema
+    "connection_name": "airtable",      # UC connection name (must match CREATE CONNECTION)
+    "base_id": "appSaRcgA5UCGoRg5",     # ← UPDATE: Your Airtable base ID
+    "default_catalog": "main",          # ← UPDATE: Your target catalog
+    "default_schema": "default",        # ← UPDATE: Your target schema
     
     "objects": [
         {
