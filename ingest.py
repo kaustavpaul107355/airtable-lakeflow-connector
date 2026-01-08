@@ -6,11 +6,10 @@ This implementation bypasses Python Data Source serialization by calling
 the connector directly in @dlt.table functions.
 
 Key Features:
-- ✅ NO serialization (works in /Workspace/ or /Repos/)
-- ✅ Gets credentials from UC connection automatically (via SQL query)
-- ✅ NO explicit credential configuration (spark.conf.get)
+- ✅ NO serialization (connector runs on driver only)
+- ✅ Gets credentials from UC connection (via SQL query)
+- ✅ Works in /Workspace/ or /Repos/
 - ✅ Simple @dlt.table decorators
-- ✅ Connector runs on driver only
 
 Prerequisites:
 1. Unity Catalog connection named 'airtable' must exist:
@@ -26,15 +25,33 @@ Prerequisites:
 For local testing, use ingest_local.py instead.
 """
 
-import dlt
-from sources.airtable.airtable import AirtableLakeflowConnector
-from libs.spec_parser import sanitize_table_name
+import sys
+import os
 
 # =============================================================================
-# GET CREDENTIALS FROM UC CONNECTION (NO EXPLICIT ACCESS)
+# PYTHON PATH SETUP (for /Workspace/ compatibility)
 # =============================================================================
-# Query UC connection metadata using SQL - credentials retrieved automatically
-# No spark.conf.get(), no explicit keys, no Databricks secrets needed
+# Add current directory to Python path so imports work in both /Workspace/ and /Repos/
+
+try:
+    # Get current notebook/file directory
+    current_dir = os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
+    
+    # Add to sys.path if not already there
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+        print(f"✓ Added to Python path: {current_dir}")
+except:
+    # Fallback: assume we're in the right directory
+    print("⚠️  Could not detect notebook path, assuming imports will work")
+
+# Now import our modules
+import dlt
+from sources.airtable.airtable import AirtableLakeflowConnector
+
+# =============================================================================
+# GET CREDENTIALS FROM UC CONNECTION
+# =============================================================================
 
 print("=" * 80)
 print("🚀 Airtable Lakeflow Connector - Simplified Pattern (No Serialization)")
@@ -42,13 +59,12 @@ print("=" * 80)
 print()
 
 try:
-    # Query UC connection metadata using SQL
-    # This retrieves credentials automatically without explicit access
+    # Query UC connection using system catalog
+    # Note: Syntax may vary by Databricks version
     connection_info = spark.sql("""
         SELECT 
-            options['bearer_token'] as bearer_token,
-            options['base_id'] as base_id,
-            options['base_url'] as base_url
+            connection_type,
+            connection_options
         FROM system.information_schema.connections
         WHERE connection_name = 'airtable'
     """).first()
@@ -56,13 +72,18 @@ try:
     if not connection_info:
         raise ValueError("UC connection 'airtable' not found")
     
-    bearer_token = connection_info['bearer_token']
-    base_id = connection_info['base_id']
-    base_url = connection_info['base_url'] or "https://api.airtable.com/v0"
+    # Extract options from the connection_options map
+    options = connection_info['connection_options']
+    bearer_token = options.get('bearer_token')
+    base_id = options.get('base_id')
+    base_url = options.get('base_url', 'https://api.airtable.com/v0')
     
-    print(f"✅ Base ID: {base_id[:10]}...")
+    if not bearer_token or not base_id:
+        raise ValueError("UC connection 'airtable' missing bearer_token or base_id")
+    
+    print(f"✅ Base ID: {base_id[:10] if base_id else 'N/A'}...")
     print(f"✅ Base URL: {base_url}")
-    print(f"✅ Credentials retrieved from UC connection 'airtable' (via SQL query)")
+    print(f"✅ Credentials retrieved from UC connection 'airtable'")
     print()
     
 except Exception as e:
@@ -80,13 +101,11 @@ except Exception as e:
     print("2. Check connection details:")
     print("   DESCRIBE CONNECTION airtable;")
     print()
-    print("3. Ensure connection has required options:")
-    print("   - bearer_token")
-    print("   - base_id")
-    print("   - base_url")
+    print("3. Ensure connection type is GENERIC_LAKEFLOW_CONNECT")
     print()
-    print("4. Create connection if missing:")
-    print("   See create_uc_connection.sql")
+    print("4. Verify connection has options: bearer_token, base_id, base_url")
+    print()
+    print("5. Check your permissions to read the connection")
     print()
     print("=" * 80)
     raise RuntimeError("UC connection not accessible") from e
@@ -205,7 +224,7 @@ def creative_requests():
 # =============================================================================
 # To add more tables, copy the pattern above:
 #
-# @dlt.table(name="your_sanitized_table_name", comment="Your Table")
+# @dlt.table(name="your_table_name", comment="Your Table")
 # def your_function_name():
 #     source_table = "Your Table Name"
 #     schema = connector.get_table_schema(source_table, {})
@@ -227,7 +246,7 @@ print("   DLT will execute these tables when the pipeline runs.")
 print()
 print("🎯 Benefits of this pattern:")
 print("   ✅ No Python Data Source serialization")
-print("   ✅ Works in /Workspace/ or /Repos/")
-print("   ✅ Credentials from UC (no explicit access)")
+print("   ✅ Works in /Workspace/ (with sys.path setup)")
+print("   ✅ Credentials from UC (SQL query)")
 print("   ✅ Simple and debuggable")
 print("=" * 80)
