@@ -40,14 +40,16 @@ source_name = "airtable"
 # =============================================================================
 # Configure your ingestion pipeline below.
 #
-# Key fields:
+# Required fields:
 # - connection_name: Unity Catalog connection name (required)
+# - default_catalog: Default catalog for tables (required)
+# - default_schema: Default schema for tables (required)
 # - objects: List of tables to ingest (required)
 #
 # Each table entry supports:
 # - source_table: Table name in Airtable (required)
-# - destination_catalog: Target catalog (optional, uses DLT pipeline default)
-# - destination_schema: Target schema (optional, uses DLT pipeline default)
+# - destination_catalog: Override default catalog (optional)
+# - destination_schema: Override default schema (optional)
 # - destination_table: Target table name (optional, defaults to source_table)
 # - table_configuration: Additional options (optional)
 #   - scd_type: "SCD_TYPE_1" (default), "SCD_TYPE_2", or "APPEND_ONLY"
@@ -57,6 +59,8 @@ source_name = "airtable"
 
 pipeline_spec = {
     "connection_name": "airtable",  # UC connection name (must match CREATE CONNECTION)
+    "default_catalog": "main",      # ← UPDATE: Your target catalog
+    "default_schema": "default",    # ← UPDATE: Your target schema
     
     "objects": [
         {
