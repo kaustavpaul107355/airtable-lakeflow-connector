@@ -20,13 +20,15 @@ This connector supports both **local testing** and **Databricks deployment**:
 **Common Error:** Running `ingest.py` in Databricks causes `NameError: name '__file__' is not defined`  
 **Solution:** Use `ingest_databricks.py` for Databricks deployment!
 
-See [DATABRICKS_DEPLOYMENT.md](./DATABRICKS_DEPLOYMENT.md) for complete deployment instructions.
+📚 **Documentation:**
+- **[Databricks Deployment Guide](./docs/DEPLOYMENT.md)** - Complete Databricks deployment instructions
+- **[Local Testing Guide](./docs/LOCAL_TESTING.md)** - Local development and testing
 
 ---
 
 ## 🎯 Quick Start
 
-This connector is designed to be deployed using the official Databricks UI or CLI tools. See [OFFICIAL_APPROACH_GUIDE.md](./OFFICIAL_APPROACH_GUIDE.md) for complete setup instructions.
+This connector is designed to be deployed using the official Databricks UI or CLI tools.
 
 ### Using Databricks UI (Recommended)
 1. Go to Databricks workspace

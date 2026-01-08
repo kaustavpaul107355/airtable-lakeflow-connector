@@ -47,7 +47,8 @@ htmlcov/
 *.db
 *.log
 
-# Node modules (for UI)
+# UI Project (separate from connector)
+ui/
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -77,3 +78,4 @@ _generated_*
 experimental/
 scratch/
 temp/
+CLEANUP_PLAN.md
