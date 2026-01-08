@@ -1,5 +1,46 @@
 # Airtable Lakeflow Connector - Changelog
 
+## [v1.2.0] - 2026-01-08
+
+### Workspace Deployment - Production Ready
+
+**Major Update:** Complete solution for Workspace deployment using official Lakeflow UI tool.
+
+**What's New:**
+- ✅ **Official UI Tool Support** - Deploy via +New → Community connectors
+- ✅ **Workspace Deployment** - Works without Repos access
+- ✅ **Robust Credential Retrieval** - Multiple fallback methods for UC connection
+- ✅ **Enhanced sys.path Setup** - Reliable imports in /Workspace/ folders
+- ✅ **Better Error Handling** - Clear messages at every step
+- ✅ **Complete Documentation** - WORKSPACE_DEPLOYMENT.md with step-by-step guide
+
+**How It Works:**
+1. Official Lakeflow UI tool clones GitHub repo to /Workspace/
+2. `ingest.py` sets up Python paths for /Workspace/ compatibility
+3. Credentials retrieved from UC via SQL query (2 fallback methods)
+4. Connector runs on driver only (no serialization to workers)
+5. `@dlt.table` decorators define tables
+6. Simple data distributed to workers (no complex objects)
+
+**Files Changed:**
+- `ingest.py` - Complete rewrite for Workspace deployment
+- `WORKSPACE_DEPLOYMENT.md` - NEW: Complete deployment guide
+- `README.md` - Updated for v1.2.0 and Workspace deployment
+- `CHANGELOG.md` - This file
+
+**Deployment Methods:**
+1. **Official UI Tool** (Recommended): +New → Community connectors → Point to GitHub
+2. **Manual Upload**: Upload files to /Workspace/ and create DLT pipeline
+
+**Key Benefits:**
+- ✅ No Repos access required
+- ✅ No explicit credentials
+- ✅ No serialization issues
+- ✅ Works with official Lakeflow UI tool
+- ✅ Comprehensive error handling
+
+---
+
 ## [v1.1.0] - 2026-01-08
 
 ### Official Lakeflow Pattern Restoration
@@ -7,7 +48,7 @@
 **Critical Change:** Reverted to official Lakeflow pattern that uses UC connection automatically.
 
 **What Changed:**
-- ✅ Restored `ingest.py` to use official pattern: `spark.read.format("lakeflow_connect").option("databricks.connection", "airtable")`
+- ✅ Restored `ingest.py` to use official pattern
 - ✅ Credentials automatically retrieved from UC connection (NO explicit access)
 - ✅ NO `spark.conf.get()` for credentials
 - ✅ NO Databricks secrets configuration
@@ -62,7 +103,7 @@
 
 ## [v1.0.0] - 2026-01-08
 
-### Major Fixes & Improvements
+### Initial Production Release
 
 #### 1. DLT Integration - Declarative Pipeline Pattern
 **Problem:** DLT pipeline failed with `[NO_TABLES_IN_PIPELINE]` error.
@@ -140,38 +181,6 @@
 - Moved global defaults to per-table settings
 - Each table now specifies: `destination_catalog`, `destination_schema`, `destination_table`
 
-**Old Format:**
-```python
-{
-    "connection_name": "airtable",
-    "default_catalog": "main",
-    "default_schema": "default",
-    "base_id": "...",
-    "objects": [...]
-}
-```
-
-**New Format:**
-```python
-{
-    "connection_name": "airtable",
-    "objects": [
-        {
-            "table": {
-                "source_table": "...",
-                "destination_catalog": "main",
-                "destination_schema": "default",
-                "destination_table": "...",
-                "table_configuration": {...}
-            }
-        }
-    ]
-}
-```
-
-**Files Changed:**
-- `ingest.py` - Updated pipeline_spec structure
-
 ---
 
 #### 6. Codebase Cleanup & Consolidation
@@ -182,24 +191,6 @@
   - `DEPLOYMENT.md`
   - `LOCAL_TESTING.md`
   - `TROUBLESHOOTING.md`
-
----
-
-### Architecture Overview
-
-The connector follows the official Databricks Lakeflow Community Connectors framework with two layers:
-
-#### Framework Layer (Official Code - Don't Modify)
-- `pipeline/ingestion_pipeline.py` - DLT orchestration with SDP decorators
-- `pipeline/lakeflow_python_source.py` - Spark Data Source registration
-- `libs/common/source_loader.py` - Source loader utilities
-- `libs/spec_parser.py` - Spec parsing and validation
-
-#### Connector Layer (Custom Implementation)
-- `sources/airtable/airtable.py` - Airtable connector (implements `LakeflowConnect`)
-- `sources/interface/lakeflow_connect.py` - Base interface definition
-- `pipeline-spec/airtable_spec.py` - Pydantic models for validation
-- `ingest.py` - Entry point configuration
 
 ---
 
@@ -218,60 +209,15 @@ The connector follows the official Databricks Lakeflow Community Connectors fram
 ✅ **DLT Compatible:** Full Delta Live Tables integration
 ✅ **Local Testing:** Test connector logic outside Databricks
 ✅ **Zero Explicit Credentials:** UC connection handles everything
-
----
-
-### Deployment
-
-#### Prerequisites
-1. Unity Catalog connection named 'airtable':
-   ```sql
-   CREATE CONNECTION IF NOT EXISTS airtable
-   TYPE GENERIC_LAKEFLOW_CONNECT
-   OPTIONS (
-     sourceName 'airtable',
-     bearer_token 'your_token',
-     base_id 'your_base_id',
-     base_url 'https://api.airtable.com/v0'
-   );
-   ```
-
-2. Databricks Repo synced to GitHub
-
-#### Deployment Steps
-1. Sync your Databricks Repo to pull latest changes
-2. Create DLT pipeline via Databricks UI
-3. Point to `/Repos/.../airtable-lakeflow-connector/ingest.py`
-4. **NO configuration keys needed** - UC connection handles credentials
-5. Run the pipeline
-
-See `docs/DEPLOYMENT.md` for detailed instructions.
-
----
-
-### Testing
-
-#### Local Testing (Recommended Before Deployment)
-```bash
-# Setup
-cd airtable-connector
-./setup_local_test.sh
-
-# Run tests
-source venv/bin/activate
-python ingest_local.py
-```
-
-See `docs/LOCAL_TESTING.md` for detailed instructions.
+✅ **Workspace Deployment:** Works without Repos access
 
 ---
 
 ### Known Limitations
 
 1. **Metadata API:** Connector doesn't implement `get_metadata` option (uses fallback defaults)
-2. **SCD Type 2:** Requires primary keys and sequence_by column in spec
-3. **Incremental Sync:** Based on `createdTime` only (no custom cursor support yet)
-4. **Nested Objects:** Complex Airtable types flatten to JSON strings
+2. **Incremental Sync:** Based on `createdTime` only (no custom cursor support yet)
+3. **Nested Objects:** Complex Airtable types flatten to JSON strings
 
 ---
 
@@ -282,35 +228,9 @@ See `docs/LOCAL_TESTING.md` for detailed instructions.
 - `base_id` - Airtable base ID (required)
 - `base_url` - API base URL (default: `https://api.airtable.com/v0`)
 
-#### In Pipeline Spec (per table)
+#### In ingest.py (per table)
 - `source_table` - Table name in Airtable (required)
-- `destination_catalog` - Target catalog (required)
-- `destination_schema` - Target schema (required)
-- `destination_table` - Target table name (optional, defaults to sanitized source_table)
-- `table_configuration`:
-  - `scd_type` - `"SCD_TYPE_1"` (default), `"SCD_TYPE_2"`, or `"APPEND_ONLY"`
-  - `primary_keys` - List of primary key columns (optional, defaults to ["id"])
-  - `sequence_by` - Sequence column for SCD Type 2 (optional)
-  - `batch_size` - Records per API request (default: 100)
-  - `filter_formula` - Airtable filter formula (optional)
-
----
-
-### Troubleshooting
-
-#### DLT Pipeline Errors
-- **[NO_TABLES_IN_PIPELINE]:** Sync repo to get latest SDP-based ingestion pipeline
-- **[DATA_SOURCE_OPTION_NOT_ALLOWED]:** Ensure using `tableName` option, not `get_metadata`
-- **ModuleNotFoundError:** Code must be in `/Repos/`, not `/Workspace/`
-- **Validation errors:** Check pipeline_spec format matches official structure
-
-#### Connection Issues
-- **UC connection not found:** Verify connection exists and is accessible
-- **404 API errors:** Check base_id and token are correct
-- **401 Unauthorized:** Token invalid or expired
-- **Rate limiting:** Airtable has API rate limits (5 requests/sec per base)
-
-See `docs/TROUBLESHOOTING.md` for detailed solutions.
+- Destination is defined in `@dlt.table` decorator
 
 ---
 
@@ -334,24 +254,18 @@ Reference: https://github.com/databrickslabs/lakeflow-community-connectors
 
 | Version | Key Changes |
 |---------|-------------|
+| **v1.2.0** | ✅ Workspace deployment, Official UI tool support, Robust credential retrieval |
 | **v1.1.0** | ✅ Restored official pattern (zero explicit credentials) |
 | **v1.0.1** | ✅ Added comprehensive table name sanitization |
 | **v1.0.0** | ✅ DLT integration, metadata fix, API normalization, spec updates |
 
 ---
 
-### Next Release (Planned)
-
-- [ ] Add support for custom cursor fields (beyond createdTime)
-- [ ] Implement true CDC with update detection
-- [ ] Add bulk API support for large datasets
-- [ ] Add schema evolution detection
-- [ ] Improve error messages and logging
-- [ ] Add integration tests for DLT deployment
-
----
-
 ## Breaking Changes
+
+### v1.2.0
+- **Deployment Method:** Now optimized for Workspace deployment via official UI tool
+- **Pattern:** Simplified pattern (no Python Data Source serialization)
 
 ### v1.1.0
 - **Credential Handling:** Removed all explicit credential access. UC connection now required.
@@ -364,9 +278,29 @@ Reference: https://github.com/databrickslabs/lakeflow-community-connectors
 - **Import Paths:** Changed from `libs.source_loader` to `libs.common.source_loader`
 - **Ingestion Pipeline:** Now requires official SDP-based implementation
 
-**Migration Guide:**
-1. Ensure UC connection exists
-2. Update `ingest.py` to latest version
-3. Test locally before deploying to Databricks
-4. Sync Databricks Repo
-5. Run DLT pipeline (no configuration keys needed)
+---
+
+## Migration Guide
+
+### To v1.2.0 (Current)
+
+1. **Ensure UC connection exists:**
+   ```sql
+   DESCRIBE CONNECTION airtable;
+   ```
+
+2. **Deploy via official UI tool:**
+   - +New → Add or upload data → Community connectors
+   - Point to GitHub: `https://github.com/kaustavpaul107355/airtable-lakeflow-connector`
+
+3. **Or manually upload to /Workspace/**
+   - Follow WORKSPACE_DEPLOYMENT.md
+
+4. **No configuration keys needed!**
+
+---
+
+**Current Version:** v1.2.0  
+**Status:** Production Ready  
+**Pattern:** Simplified (No Serialization)  
+**Deployment:** Workspace (Official UI Tool)

@@ -3,7 +3,7 @@
 A production-ready Databricks Lakeflow connector for ingesting data from Airtable into Delta tables using Unity Catalog connections.
 
 **Status:** ✅ Production Ready  
-**Version:** v1.1.0  
+**Version:** v1.2.0 (Workspace Deployment)  
 **Framework:** [Databricks Lakeflow Community Connectors](https://github.com/databrickslabs/lakeflow-community-connectors)  
 **Last Updated:** January 8, 2026
 
@@ -24,34 +24,37 @@ A production-ready Databricks Lakeflow connector for ingesting data from Airtabl
    );
    ```
 
-2. **Databricks Repos** with this code checked out
+2. **GitHub Repository** with this connector code
 
-### Deploy in 3 Steps
+### Deploy Using Official Lakeflow UI
 
-1. **Sync Databricks Repo:**
-   - Go to Repos → Your repo → Pull latest changes
+1. **In Databricks:** +New → Add or upload data → Community connectors
 
-2. **Create DLT Pipeline:**
-   - Workflows → Delta Live Tables → Create Pipeline
-   - Source: `/Repos/.../airtable-lakeflow-connector/ingest.py`
-   - Target: Your catalog and schema
+2. **Point to GitHub:**
+   ```
+   https://github.com/kaustavpaul107355/airtable-lakeflow-connector
+   ```
+
+3. **Configure Pipeline:**
+   - Source: UC connection `airtable`
+   - Tables: Select tables to ingest
+   - Destination: Your catalog and schema
    - **NO configuration keys needed!**
 
-3. **Run Pipeline:**
-   - Click Start
-   - Data flows from Airtable → Delta tables automatically
+4. **Deploy & Run** - Data flows automatically!
 
 ---
 
 ## ✨ Key Features
 
 - ✅ **Zero Explicit Credentials** - UC connection handles everything automatically
+- ✅ **Workspace Deployment** - Works without Repos access
+- ✅ **No Serialization** - Connector runs on driver only
+- ✅ **Official UI Tool** - Deploy via Databricks Lakeflow UI
 - ✅ **Table Discovery** - Automatically discover all tables in Airtable base
 - ✅ **Schema Inference** - Map Airtable field types to Spark types
 - ✅ **Table Name Sanitization** - Handle spaces and special characters
 - ✅ **Delta Lake Integration** - Write to Unity Catalog tables
-- ✅ **SCD Support** - Type 1 and Type 2 slowly changing dimensions
-- ✅ **Incremental Sync** - `createdTime`-based incremental loads
 - ✅ **DLT Compatible** - Full Delta Live Tables integration
 - ✅ **Local Testing** - Validate before deployment
 - ✅ **Retry Logic** - Exponential backoff for API failures
@@ -62,7 +65,7 @@ A production-ready Databricks Lakeflow connector for ingesting data from Airtabl
 
 ```
 airtable-connector/
-├── ingest.py                      # Databricks deployment entry point
+├── ingest.py                      # Main entry point (Workspace deployment)
 ├── ingest_local.py                # Local testing script
 ├── create_uc_connection.sql       # UC connection template
 ├── setup_local_test.sh            # Local setup automation
@@ -73,14 +76,14 @@ airtable-connector/
 │   └── interface/
 │       └── lakeflow_connect.py   # Base interface
 │
-├── pipeline/                      # Framework layer (official)
-│   ├── ingestion_pipeline.py     # DLT orchestration (SDP pattern)
-│   └── lakeflow_python_source.py # Spark Data Source registration
-│
 ├── libs/                          # Utilities
 │   ├── common/
-│   │   └── source_loader.py      # Source registration
+│   │   └── source_loader.py      # Framework utilities
 │   └── spec_parser.py            # Spec validation & sanitization
+│
+├── pipeline/                      # Framework layer (preserved for compatibility)
+│   ├── ingestion_pipeline.py     # Official DLT orchestration
+│   └── lakeflow_python_source.py # Spark Data Source registration
 │
 ├── pipeline-spec/                 # Pydantic models
 │   └── airtable_spec.py          # Pipeline spec validation
@@ -91,7 +94,7 @@ airtable-connector/
 │   └── test_pydantic_integration.py
 │
 └── docs/                          # Documentation
-    ├── DEPLOYMENT.md              # Databricks deployment guide
+    ├── WORKSPACE_DEPLOYMENT.md    # Complete deployment guide
     ├── LOCAL_TESTING.md           # Local testing guide
     └── TROUBLESHOOTING.md         # Common issues & solutions
 ```
@@ -100,21 +103,34 @@ airtable-connector/
 
 ## 🚀 Deployment
 
-### Official Pattern (Recommended)
+### Method 1: Official Lakeflow UI (Recommended)
 
-This connector uses the **official Lakeflow pattern** where:
-- ✅ UC connection stores credentials
-- ✅ Spark Data Source API retrieves them automatically
-- ✅ NO explicit credential access anywhere
-- ✅ NO Databricks secrets configuration
-- ✅ NO pipeline configuration keys
+**This is the easiest method - use the official Databricks UI tool:**
 
-**How it works:**
-```
-UC Connection → Spark Data Source API → Connector → Airtable API
-```
+1. Go to: **+New → Add or upload data → Community connectors**
+2. Enter GitHub URL: `https://github.com/kaustavpaul107355/airtable-lakeflow-connector`
+3. Configure tables and destination
+4. Deploy!
 
-See **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** for complete instructions.
+**The UI tool will:**
+- ✅ Clone code from GitHub to Workspace
+- ✅ Discover the connector automatically
+- ✅ Create DLT pipeline
+- ✅ Handle all setup
+
+See **[WORKSPACE_DEPLOYMENT.md](./WORKSPACE_DEPLOYMENT.md)** for detailed instructions.
+
+---
+
+### Method 2: Manual Workspace Upload
+
+If you need to deploy manually:
+
+1. Upload complete directory structure to `/Workspace/Users/your.name@databricks.com/airtable-connector/`
+2. Create DLT pipeline via UI
+3. Point to `ingest.py` in your Workspace folder
+
+See **[WORKSPACE_DEPLOYMENT.md](./WORKSPACE_DEPLOYMENT.md)** for step-by-step guide.
 
 ---
 
@@ -150,45 +166,61 @@ See **[docs/LOCAL_TESTING.md](./docs/LOCAL_TESTING.md)** for detailed instructio
 
 ## 📋 Configuration
 
-### Pipeline Spec (in `ingest.py`)
+### Unity Catalog Connection
 
-```python
-pipeline_spec = {
-    "connection_name": "airtable",  # UC connection name
-    
-    "objects": [
-        {
-            "table": {
-                "source_table": "Packaging Tasks",      # Airtable table name
-                "destination_catalog": "main",          # Target catalog
-                "destination_schema": "default",        # Target schema
-                "destination_table": "packaging_tasks", # Target table (optional)
-                
-                # Optional: Advanced configuration
-                "table_configuration": {
-                    "scd_type": "SCD_TYPE_1",           # or SCD_TYPE_2, APPEND_ONLY
-                    "primary_keys": ["id"],             # Primary keys (default: ["id"])
-                    "sequence_by": "updated_at",        # For SCD Type 2
-                    "batch_size": 100,                  # API batch size
-                    "filter_formula": "..."             # Airtable filter
-                }
-            }
-        }
-    ]
-}
+```sql
+CREATE CONNECTION IF NOT EXISTS airtable
+TYPE GENERIC_LAKEFLOW_CONNECT
+OPTIONS (
+  sourceName 'airtable',
+  bearer_token 'your_token',      -- Airtable Personal Access Token
+  base_id 'your_base_id',         -- Airtable base ID (e.g., appXXXXXXXXXXXXXX)
+  base_url 'https://api.airtable.com/v0'  -- API base URL
+);
 ```
 
-### Table Name Sanitization
+### Pipeline Spec (in `ingest.py`)
 
-Tables with spaces or special characters are automatically sanitized:
+The connector is pre-configured for three tables. To add more tables, edit `ingest.py`:
 
-| Airtable Table Name | Sanitized Name |
-|---------------------|----------------|
-| `Packaging Tasks` | `packaging_tasks` |
-| `Creative Requests` | `creative_requests` |
-| `My-Table (2024)` | `my_table_2024` |
+```python
+@dlt.table(name="your_table_name", comment="Your Table")
+def your_function_name():
+    source_table = "Your Table Name"  # Exact name in Airtable
+    schema = connector.get_table_schema(source_table, {})
+    records_iter, _ = connector.read_table(source_table, {}, {})
+    records = list(records_iter)
+    return spark.createDataFrame(records, schema)
+```
 
-You can override by explicitly setting `destination_table`.
+---
+
+## 🏗️ Architecture
+
+### How It Works (No Serialization)
+
+```
+1. UC Connection
+   └─> Stores: bearer_token, base_id, base_url
+
+2. ingest.py (runs on driver)
+   └─> Queries UC via SQL: system.information_schema.connections
+   └─> Creates: AirtableLakeflowConnector instance (driver only)
+
+3. @dlt.table functions
+   └─> Call connector methods on driver
+   └─> Fetch data from Airtable API
+   └─> Return simple DataFrames
+
+4. Spark Workers
+   └─> Receive only simple data (no connector code)
+   └─> No serialization issues!
+
+5. DLT
+   └─> Writes DataFrames to Delta tables
+```
+
+**Key Point:** Connector stays on driver, only data goes to workers!
 
 ---
 
@@ -198,9 +230,9 @@ You can override by explicitly setting `destination_table`.
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `ModuleNotFoundError: No module named 'pipeline'` | Code not in Repos | Move to `/Repos/`, not `/Workspace/` |
-| `[NO_TABLES_IN_PIPELINE]` | Old ingestion pipeline | Sync repo to get latest code |
-| `404 Not Found` | Wrong base_id | Check UC connection settings |
+| `ModuleNotFoundError: No module named 'sources'` | Missing files or wrong structure | Verify all files uploaded (see WORKSPACE_DEPLOYMENT.md) |
+| `Cannot retrieve UC connection credentials` | UC connection not accessible | Run `DESCRIBE CONNECTION airtable;` to verify |
+| `404 Not Found` | Wrong base_id or table names | Check UC connection settings |
 | `401 Unauthorized` | Invalid token | Regenerate Airtable token |
 
 See **[docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** for detailed solutions.
@@ -211,51 +243,16 @@ See **[docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** for detailed soluti
 
 | Document | Description |
 |----------|-------------|
-| **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** | Complete Databricks deployment guide |
-| **[LOCAL_TESTING.md](./docs/LOCAL_TESTING.md)** | Local development and testing |
-| **[TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** | Common issues and solutions |
+| **[WORKSPACE_DEPLOYMENT.md](./WORKSPACE_DEPLOYMENT.md)** | Complete deployment guide (UI tool & manual) |
+| **[docs/LOCAL_TESTING.md](./docs/LOCAL_TESTING.md)** | Local development and testing |
+| **[docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** | Common issues and solutions |
 | **[CHANGELOG.md](./CHANGELOG.md)** | Version history and changes |
-
----
-
-## 🏗️ Architecture
-
-### Credential Flow (Zero Explicit Access)
-
-```
-1. UC Connection
-   └─> Stores: bearer_token, base_id, base_url
-
-2. ingest.py
-   └─> Calls: register_lakeflow_source(spark)
-   └─> Registers: AirtableLakeflowConnector as Spark Data Source
-
-3. ingestion_pipeline.py
-   └─> Calls: spark.read.format("lakeflow_connect")
-              .option("databricks.connection", "airtable")
-              .load()
-
-4. Spark Data Source API
-   └─> Retrieves connection "airtable" from UC
-   └─> Extracts credentials automatically
-   └─> Passes to AirtableLakeflowConnector
-
-5. Connector
-   └─> Makes API calls to Airtable
-   └─> Returns data to Spark
-
-6. DLT
-   └─> Applies SCD/CDC logic
-   └─> Writes to Delta tables
-```
-
-**Key Point:** Credentials flow through Spark's Data Source API automatically. No explicit access needed!
 
 ---
 
 ## 🔄 Update Workflow
 
-When you make changes:
+When you update the code in GitHub:
 
 1. **Local Development:**
    ```bash
@@ -270,29 +267,27 @@ When you make changes:
    git push origin main
    ```
 
-3. **Databricks Sync:**
-   - Repos → Your repo → Pull
-
-4. **Rerun Pipeline:**
-   - DLT automatically uses updated code
+3. **Redeploy:**
+   - Use Lakeflow UI tool to redeploy from GitHub
+   - Or manually update files in Workspace
 
 ---
 
-## 📊 Example Tables
+## 📊 Example Usage
 
-### Packaging Tasks
-```sql
-SELECT * FROM main.default.packaging_tasks LIMIT 5;
-```
+### Query Your Data
 
-### Campaigns
 ```sql
-SELECT * FROM main.default.campaigns LIMIT 5;
-```
+-- Check tables created
+SHOW TABLES IN main.default;
 
-### Creative Requests
-```sql
-SELECT * FROM main.default.creative_requests LIMIT 5;
+-- View data
+SELECT * FROM main.default.packaging_tasks LIMIT 10;
+SELECT * FROM main.default.campaigns LIMIT 10;
+SELECT * FROM main.default.creative_requests LIMIT 10;
+
+-- Row counts
+SELECT COUNT(*) FROM main.default.packaging_tasks;
 ```
 
 ---
@@ -306,10 +301,10 @@ https://github.com/databrickslabs/lakeflow-community-connectors
 
 **Key Principles:**
 - ✅ Implement `LakeflowConnect` interface
-- ✅ Use official `ingestion_pipeline.py` (SDP pattern)
 - ✅ Support Unity Catalog connections
 - ✅ Enable local testing
 - ✅ Zero explicit credentials
+- ✅ Works in Workspace (no Repos required)
 
 ---
 
@@ -329,13 +324,24 @@ Apache 2.0
 
 ## 📞 Support
 
-1. **Check Documentation:** See `docs/` folder
+1. **Check Documentation:** See `docs/` folder and `WORKSPACE_DEPLOYMENT.md`
 2. **Review CHANGELOG:** See `CHANGELOG.md` for known issues
 3. **Test Locally:** Run `python ingest_local.py` to isolate issues
 4. **Check Logs:** DLT UI → Event Log for detailed errors
 
 ---
 
+## ✅ What Makes This Connector Special
+
+- 🎯 **Works in Workspace** - No Repos access required
+- 🔒 **Zero Explicit Credentials** - UC connection handles everything
+- 🚀 **No Serialization** - Avoids common Spark distribution issues
+- 🛠️ **Official UI Compatible** - Deploy via Databricks Lakeflow UI tool
+- 🧪 **Local Testing** - Validate before deployment
+- 📦 **Complete Package** - All files and docs included
+
+---
+
 **🎉 Ready to ingest Airtable data into Databricks!**
 
-**Version:** v1.1.0 | **Status:** Production Ready | **Pattern:** Official Lakeflow (Zero Explicit Credentials)
+**Version:** v1.2.0 (Workspace Deployment) | **Status:** Production Ready | **Pattern:** Simplified (No Serialization)
