@@ -34,28 +34,58 @@ from sources.airtable.airtable import AirtableLakeflowConnector
 from libs.spec_parser import sanitize_table_name
 
 # =============================================================================
-# CONFIGURATION - Get credentials from Unity Catalog connection
+# CONFIGURATION - Get credentials from Unity Catalog connection  
 # =============================================================================
 
-# These will be automatically injected by DLT when using UC connection
+print("=" * 80)
+print("🚀 Airtable Lakeflow Connector - Simplified Pattern")
+print("=" * 80)
+
+# DLT pipelines can access UC connections via spark.conf IF configured properly
+# You MUST add this to your DLT pipeline configuration (JSON/YAML):
+#
+# "configuration": {
+#   "connection.airtable.bearer_token": "{{secrets/your-scope/airtable-token}}",
+#   "connection.airtable.base_id": "<your-airtable-base-id>",
+#   "connection.airtable.base_url": "https://api.airtable.com/v0"
+# }
+#
+# OR use Databricks secrets to avoid hardcoding
+
 try:
     bearer_token = spark.conf.get("connection.airtable.bearer_token")
     base_id = spark.conf.get("connection.airtable.base_id")
     base_url = spark.conf.get("connection.airtable.base_url", "https://api.airtable.com/v0")
     
-    print("=" * 80)
-    print("🚀 Airtable Lakeflow Connector - Simplified Pattern")
-    print("=" * 80)
-    print(f"Base ID: {base_id[:10]}...")
-    print(f"Base URL: {base_url}")
-    print("Credentials loaded from UC connection: airtable")
+    print(f"✅ Base ID: {base_id[:10]}...")
+    print(f"✅ Base URL: {base_url}")
+    print("✅ Credentials loaded successfully")
     print()
     
 except Exception as e:
-    print("⚠️  Could not load credentials from UC connection.")
-    print(f"   Error: {e}")
-    print("   Make sure the DLT pipeline has access to connection 'airtable'")
-    raise
+    print()
+    print("=" * 80)
+    print("❌ ERROR: Cannot access UC connection credentials")
+    print("=" * 80)
+    print(f"Error: {e}")
+    print()
+    print("🔧 FIX: Add this to your DLT Pipeline Configuration:")
+    print()
+    print('In DLT UI → Settings → Advanced → Configuration, add:')
+    print()
+    print('  Key: connection.airtable.bearer_token')
+    print('  Value: {{secrets/your-scope/your-token-key}}')
+    print()
+    print('  Key: connection.airtable.base_id')  
+    print('  Value: appSaRcgA5UCGoRg5')
+    print()
+    print('  Key: connection.airtable.base_url')
+    print('  Value: https://api.airtable.com/v0')
+    print()
+    print("📖 OR see docs/DEPLOYMENT.md for detailed instructions")
+    print("=" * 80)
+    print()
+    raise RuntimeError("UC connection not configured. See error message above for fix.")
 
 # =============================================================================
 # CREATE CONNECTOR INSTANCE (runs on driver only)
