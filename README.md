@@ -14,11 +14,10 @@ This connector supports both **local testing** and **Databricks deployment**:
 
 | File | Purpose | Where to Use |
 |------|---------|--------------|
-| **`ingest.py`** | Local testing with mock Spark | 💻 Your local machine |
-| **`ingest_databricks.py`** | Databricks deployment | ☁️ Databricks workspace |
+| **`ingest.py`** | Databricks deployment (production) | ☁️ Databricks workspace |
+| **`ingest_local.py`** | Local testing with mock Spark | 💻 Your local machine |
 
-**Common Error:** Running `ingest.py` in Databricks causes `NameError: name '__file__' is not defined`  
-**Solution:** Use `ingest_databricks.py` for Databricks deployment!
+**Use `ingest.py` for all Databricks deployments** - it has the correct import paths and no `__file__` dependencies.
 
 📚 **Documentation:**
 - **[Databricks Deployment Guide](./docs/DEPLOYMENT.md)** - Complete Databricks deployment instructions
