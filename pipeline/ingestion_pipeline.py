@@ -164,6 +164,15 @@ def ingest(spark, pipeline_spec: dict) -> None:
         if scd_type_raw == "APPEND_ONLY":
             ingestion_type = "append"
         scd_type = "2" if scd_type_raw == "SCD_TYPE_2" else "1"
+        
+        # Handle missing primary keys: Airtable always has 'id' field
+        if not primary_keys:
+            primary_keys = ["id"]  # Airtable's default primary key
+        
+        # If ingestion requires keys (cdc/snapshot) but we still don't have them, fall back to append
+        if ingestion_type in ("cdc", "snapshot") and not primary_keys:
+            print(f"   ⚠️  No primary keys for {table}, falling back to append-only mode")
+            ingestion_type = "append"
 
         if ingestion_type == "cdc":
             _create_cdc_table(
