@@ -1,12 +1,21 @@
 # 🚀 Databricks Deployment Guide
 
+## ✅ **Official Lakeflow Pattern - Zero Explicit Credentials**
+
+This connector uses the **official Lakeflow Community Connectors pattern** where:
+
+- ✅ **UC Connection** stores credentials securely
+- ✅ **No explicit credential access** in code or pipeline config
+- ✅ **Automatic credential injection** via `databricks.connection` option
+- ✅ **Databricks Repos** ensures proper Python serialization
+
+---
+
 ## 📋 **Prerequisites**
 
-Before deploying, ensure you have:
-
-1. ✅ **UC Connection Created**: A Unity Catalog connection named `airtable`
-2. ✅ **Databricks Repo**: Code checked out in Databricks Repos
-3. ✅ **Permissions**: Access to create DLT pipelines and write to target catalog/schema
+1. ✅ **Unity Catalog Connection** named `airtable` exists
+2. ✅ **Databricks Repos** has your code checked out
+3. ✅ **Permissions** to create DLT pipelines
 
 ---
 
@@ -32,23 +41,29 @@ SHOW CONNECTIONS;
 DESCRIBE CONNECTION airtable;
 ```
 
+**That's it!** The connector will automatically use these credentials. No other configuration needed.
+
 ---
 
 ## 📂 **Step 2: Deploy Code to Databricks Repos**
 
+### **Why Repos?**
+- ✅ Proper Python package resolution
+- ✅ Handles serialization for Spark workers
+- ✅ Git version control
+- ✅ No manual `sys.path` manipulation
+
 ### **Option A: Sync Existing Repo** (if already set up)
 
-1. Go to your Databricks workspace
-2. Navigate to **Repos** → `/Users/your.name@databricks.com/`
-3. Find your `airtable-connector` repo
-4. Click the branch dropdown → **Pull latest changes**
+1. Go to **Repos** in your Databricks workspace
+2. Navigate to your `airtable-lakeflow-connector` repo
+3. Click branch dropdown → **Pull latest changes**
 
 ### **Option B: Create New Repo** (first time)
 
-1. Go to **Repos** in Databricks
-2. Click **Add Repo**
-3. Enter repo URL: `https://github.com/kaustavpaul107355/airtable-lakeflow-connector`
-4. Click **Create**
+1. Go to **Repos** → **Add Repo**
+2. Git repo URL: `https://github.com/kaustavpaul107355/airtable-lakeflow-connector`
+3. Click **Create Repo**
 
 Your code will be at:
 ```
@@ -59,79 +74,53 @@ Your code will be at:
 
 ## 🎯 **Step 3: Create DLT Pipeline**
 
-### **Method 1: Using Databricks UI** (RECOMMENDED)
+### **Using Databricks UI** (RECOMMENDED)
 
 1. Go to **Workflows** → **Delta Live Tables**
 2. Click **Create Pipeline**
-3. Fill in the form:
+3. Configure:
 
 **Basic Settings:**
 - **Pipeline Name**: `Airtable Lakeflow Connector`
-- **Product Edition**: `Advanced`
-- **Notebook/File Path**: `/Repos/Users/your.name@databricks.com/airtable-lakeflow-connector/ingest.py`
-- **Target**: 
-  - Catalog: `main` (or your catalog)
-  - Schema: `default` (or your schema)
+- **Product Edition**: `Advanced` (for CDC/SCD support)
+- **Source Code**: 
+  - Path: `/Repos/Users/your.name@databricks.com/airtable-lakeflow-connector/ingest.py`
+  - **CRITICAL**: Must be in `/Repos/`, NOT `/Workspace/`
 
-**Compute Settings:**
-- **Cluster Mode**: `Fixed Size` or `Autoscaling`
-- **Workers**: `1` (for small datasets)
-- **Cluster Policy**: (optional)
+**Target:**
+- **Catalog**: `main` (or your catalog)
+- **Schema**: `default` (or your schema)
+
+**Compute:**
+- **Cluster Mode**: Fixed or Autoscaling
+- **Workers**: 1 (sufficient for most Airtable datasets)
 - **Photon**: ✅ Enabled
 - **Serverless**: ✅ Enabled (if available)
 
-**Advanced Settings → Configuration:**
-
-**🚨 CRITICAL: Add these configuration parameters:**
-
-```
-Key: connection.airtable.bearer_token
-Value: {{secrets/your-secret-scope/airtable-token}}
-
-Key: connection.airtable.base_id
-Value: <your-airtable-base-id>
-
-Key: connection.airtable.base_url
-Value: https://api.airtable.com/v0
-```
-
-**Important Notes:**
-- Use Databricks Secrets for the token (recommended)
-- Or temporarily use plain text value for testing: `patABC123...`
-- The keys MUST match exactly: `connection.airtable.*`
-
 **Other Settings:**
 - **Development Mode**: ✅ Enabled (for testing)
-- **Channel**: `Current` (or `Preview`)
+- **Channel**: Current
 - **Storage Location**: (leave default)
+
+**🚨 IMPORTANT: No Configuration Keys Needed!**
+
+Do NOT add any of these:
+- ❌ `connection.airtable.bearer_token`
+- ❌ `connection.airtable.base_id`
+- ❌ `connection.airtable.base_url`
+
+The official pattern retrieves these automatically from the UC connection!
 
 4. Click **Create**
 
 ---
 
-### **Method 2: Using JSON Configuration**
-
-Create a file `dlt_pipeline_config.json`:
+### **Using JSON Configuration**
 
 ```json
 {
   "name": "Airtable Lakeflow Connector",
   "storage": "/mnt/dlt/airtable",
-  "configuration": {
-    "connection.airtable.bearer_token": "{{secrets/your-scope/airtable-token}}",
-    "connection.airtable.base_id": "<your-airtable-base-id>",
-    "connection.airtable.base_url": "https://api.airtable.com/v0"
-  },
-  "clusters": [
-    {
-      "label": "default",
-      "num_workers": 1,
-      "autoscale": {
-        "min_workers": 1,
-        "max_workers": 2
-      }
-    }
-  ],
   "libraries": [
     {
       "notebook": {
@@ -143,60 +132,47 @@ Create a file `dlt_pipeline_config.json`:
   "continuous": false,
   "development": true,
   "photon": true,
-  "edition": "ADVANCED"
+  "edition": "ADVANCED",
+  "clusters": [
+    {
+      "label": "default",
+      "num_workers": 1
+    }
+  ]
 }
 ```
 
-Deploy via CLI:
-```bash
-databricks pipelines create --json-file dlt_pipeline_config.json
+**Note:** No `configuration` section needed!
+
+---
+
+## ▶️ **Step 4: Run the Pipeline**
+
+1. Click **Start** in DLT UI
+2. Monitor execution in **Event Log**
+3. Check **Graph** tab for table lineage
+
+**Expected Output:**
+```
+🚀 Airtable Lakeflow Connector - Official Pattern
+Source: airtable
+UC Connection: airtable
+Tables: 3
+
+✅ Using UC connection - no explicit credentials needed
+
+✓ Connector registered
+
+📊 Creating table: main.default.packaging_tasks
+📊 Creating table: main.default.campaigns
+📊 Creating table: main.default.creative_requests
+
+✅ Ingestion pipeline completed!
 ```
 
 ---
 
-## 🔐 **Step 4: Set Up Databricks Secrets** (RECOMMENDED)
-
-Instead of hardcoding your Airtable token, use Databricks Secrets:
-
-### **Create Secret Scope:**
-```bash
-databricks secrets create-scope --scope airtable-secrets
-```
-
-### **Add Secret:**
-```bash
-databricks secrets put --scope airtable-secrets --key token
-# This will open an editor - paste your Airtable token and save
-```
-
-### **Update DLT Configuration:**
-```
-Key: connection.airtable.bearer_token
-Value: {{secrets/airtable-secrets/token}}
-```
-
----
-
-## ▶️ **Step 5: Run the Pipeline**
-
-1. In DLT UI, click **Start**
-2. Monitor the execution:
-   - Check **Graph** tab for table dependencies
-   - Check **Event Log** for detailed logs
-   - Check **Data Quality** for any issues
-
-3. Expected output:
-   ```
-   ✅ packaging_tasks: X records loaded
-   ✅ campaigns: Y records loaded
-   ✅ creative_requests: Z records loaded
-   ```
-
----
-
-## 🔍 **Step 6: Verify Data**
-
-Query your tables:
+## 🔍 **Step 5: Verify Data**
 
 ```sql
 -- Check tables were created
@@ -207,64 +183,42 @@ SELECT * FROM main.default.packaging_tasks LIMIT 10;
 SELECT * FROM main.default.campaigns LIMIT 10;
 SELECT * FROM main.default.creative_requests LIMIT 10;
 
--- Check row counts
-SELECT 
-  'packaging_tasks' as table_name, 
-  COUNT(*) as row_count 
-FROM main.default.packaging_tasks
-UNION ALL
-SELECT 
-  'campaigns', 
-  COUNT(*) 
-FROM main.default.campaigns
-UNION ALL
-SELECT 
-  'creative_requests', 
-  COUNT(*) 
-FROM main.default.creative_requests;
+-- Row counts
+SELECT COUNT(*) FROM main.default.packaging_tasks;
+SELECT COUNT(*) FROM main.default.campaigns;
+SELECT COUNT(*) FROM main.default.creative_requests;
 ```
 
 ---
 
-## 🐛 **Troubleshooting Common Errors**
+## 🐛 **Troubleshooting**
 
-### **Error 1: `SparkNoSuchElementException: [SQL_CONF_NOT_FOUND] connection.airtable.bearer_token`**
+### **Error 1: `ModuleNotFoundError: No module named 'pipeline'`**
 
-**Cause:** DLT pipeline configuration missing required keys
+**Cause:** Code not in Databricks Repos
 
 **Fix:**
-1. Go to DLT Pipeline → **Settings** → **Advanced** → **Configuration**
-2. Add the three required configuration keys (see Step 3 above)
-3. Save and restart pipeline
+1. Verify DLT pipeline path starts with `/Repos/` (not `/Workspace/`)
+2. If in Workspace, move to Repos:
+   - Create new repo pointing to your GitHub
+   - Update DLT pipeline path
 
-**Visual Guide:**
+**Correct path:**
 ```
-DLT UI
-├── Your Pipeline
-│   ├── Settings (⚙️)
-│   │   ├── Advanced
-│   │   │   ├── Configuration ← ADD KEYS HERE
-│   │   │   │   ├── connection.airtable.bearer_token: {{secrets/...}}
-│   │   │   │   ├── connection.airtable.base_id: appXXXXX
-│   │   │   │   └── connection.airtable.base_url: https://...
+✅ /Repos/Users/name@company.com/airtable-lakeflow-connector/ingest.py
+❌ /Workspace/Users/name@company.com/airtable-connector/ingest.py
 ```
 
 ---
 
-### **Error 2: `ModuleNotFoundError: No module named 'sources'`**
+### **Error 2: `[NO_TABLES_IN_PIPELINE]`**
 
-**Cause:** Code not in Databricks Repos, or wrong path in DLT config
+**Cause:** DLT can't find table definitions
 
 **Fix:**
-1. Ensure code is in `/Repos/` directory (NOT `/Workspace/Users/`)
-2. Update DLT pipeline path to point to Repos location
-3. Repos provides proper Python package resolution
-
-**Correct path format:**
-```
-✅ /Repos/Users/your.name@databricks.com/airtable-lakeflow-connector/ingest.py
-❌ /Workspace/Users/your.name@databricks.com/airtable-connector/ingest.py
-```
+1. Verify `ingest.py` path is correct
+2. Check Repos has latest code (`git pull`)
+3. Ensure `pipeline/ingestion_pipeline.py` exists and has `@dlt.table` or SDP decorators
 
 ---
 
@@ -273,7 +227,7 @@ DLT UI
 **Cause:** Wrong `base_id` or table names
 
 **Fix:**
-1. Verify `base_id` in your UC connection or DLT config
+1. Verify `base_id` in UC connection: `DESCRIBE CONNECTION airtable;`
 2. Check table names in `ingest.py` match Airtable exactly (case-sensitive)
 3. Test locally first: `python ingest_local.py`
 
@@ -281,154 +235,147 @@ DLT UI
 
 ### **Error 4: `401 Unauthorized` from Airtable API**
 
-**Cause:** Invalid or expired Airtable token
+**Cause:** Invalid token
 
 **Fix:**
 1. Generate new Personal Access Token in Airtable
-2. Update Databricks secret or DLT configuration
-3. Ensure token has correct scopes: `data.records:read`, `schema.bases:read`
+2. Update UC connection:
+   ```sql
+   ALTER CONNECTION airtable
+   SET OPTIONS (bearer_token = 'new_token_here');
+   ```
+3. Ensure token has scopes: `data.records:read`, `schema.bases:read`
 
 ---
 
-### **Error 5: `[NO_TABLES_IN_PIPELINE]`**
+### **Error 5: UC Connection Not Found**
 
-**Cause:** DLT can't find @dlt.table definitions
+**Cause:** Connection doesn't exist or no permissions
 
 **Fix:**
-1. Verify `ingest.py` path in DLT config is correct
-2. Check `ingest.py` has @dlt.table decorators
-3. Ensure Python code is syntactically valid
-
----
-
-## 📊 **Monitoring & Operations**
-
-### **Check Pipeline Status:**
-```sql
--- View pipeline runs
-SELECT * FROM system.livelinetables.pipeline_events 
-WHERE pipeline_id = 'your-pipeline-id'
-ORDER BY timestamp DESC
-LIMIT 100;
-```
-
-### **Monitor Data Freshness:**
-```sql
--- Check last update time
-DESCRIBE EXTENDED main.default.packaging_tasks;
-```
-
-### **Schedule Pipeline:**
-
-In DLT UI → **Settings** → **Triggers**:
-- **Triggered**: Manual execution
-- **Continuous**: Runs continuously
-- **Scheduled**: Cron-based schedule (e.g., `0 0 * * *` for daily at midnight)
+1. Check connection exists: `SHOW CONNECTIONS;`
+2. If missing, create it (see Step 1)
+3. Verify you have `USE CONNECTION` permission
 
 ---
 
 ## 🔄 **Update Workflow**
 
-When you update the connector code:
+When you make code changes:
 
-1. **Local Changes:**
-   ```bash
-   cd /path/to/airtable-connector
-   # Make your changes
-   python ingest_local.py  # Test locally
-   ```
+**1. Local Development:**
+```bash
+cd airtable-connector
+# Edit code
+python ingest_local.py  # Test locally
+```
 
-2. **Git Sync:**
-   ```bash
-   git add -A
-   git commit -m "Your changes"
-   git push origin main
-   ```
+**2. Git Sync:**
+```bash
+git add -A
+git commit -m "Your changes"
+git push origin main
+```
 
-3. **Databricks Sync:**
-   - Go to Repos in Databricks
-   - Click branch dropdown → **Pull**
-   - Or: Click **...** → **Git** → **Pull latest changes**
+**3. Databricks Sync:**
+- Go to Repos → Your repo
+- Click **...** → **Pull** latest changes
 
-4. **Rerun Pipeline:**
-   - DLT will automatically use updated code
-   - Click **Start** to run with new changes
+**4. Rerun Pipeline:**
+- Click **Start** (uses updated code automatically)
 
 ---
 
-## 📞 **Getting Help**
+## 📊 **How It Works (Technical)**
 
-If you encounter issues:
+### **Credential Flow:**
 
-1. **Check Logs:**
-   - DLT UI → **Event Log** tab
-   - Look for Python tracebacks
+```
+1. You create UC connection
+   └─> Databricks stores credentials securely
 
-2. **Verify Setup:**
-   ```bash
-   # Local testing
-   cd airtable-connector
-   python ingest_local.py
-   ```
+2. DLT runs ingest.py
+   └─> Calls: register_lakeflow_source(spark)
+   └─> Registers AirtableLakeflowConnector as Spark Data Source
 
-3. **Review Checklist:**
-   - [ ] UC connection exists and has correct credentials
-   - [ ] Code is in Databricks Repos (not Workspace)
-   - [ ] DLT pipeline configuration has `connection.airtable.*` keys
-   - [ ] Table names in `ingest.py` match Airtable
-   - [ ] Local testing passes
+3. ingestion_pipeline.py executes
+   └─> Calls: spark.read.format("lakeflow_connect")
+                    .option("databricks.connection", "airtable")
+                    .load()
+   
+4. Spark Data Source API
+   └─> Retrieves connection "airtable" from UC
+   └─> Extracts credentials automatically
+   └─> Passes to AirtableLakeflowConnector instance
+   
+5. Connector makes API calls
+   └─> Uses credentials from UC
+   └─> Returns data to Spark
+   
+6. DLT creates tables
+   └─> Applies SCD/CDC logic
+   └─> Writes to Delta tables
+```
 
-4. **Contact Expert:**
-   > "I've followed the deployment guide and verified all prerequisites.
-   > Local testing passes successfully.
-   > 
-   > Current error: [paste error message]
-   > 
-   > Configuration:
-   > - Pipeline: [link to DLT pipeline]
-   > - Code location: [path in Repos]
-   > - UC connection: [output of DESCRIBE CONNECTION airtable]
-   > 
-   > Can you help troubleshoot?"
+**Key Point:** Credentials flow through Spark's Data Source API automatically. No explicit access needed anywhere!
 
 ---
 
 ## ✅ **Deployment Checklist**
 
-Before marking deployment as complete:
+Before marking complete:
 
-- [ ] ✅ UC connection `airtable` exists
-- [ ] ✅ Code deployed to Databricks Repos
-- [ ] ✅ DLT pipeline created
-- [ ] ✅ Configuration keys added to DLT pipeline
-- [ ] ✅ Databricks secrets configured (recommended)
-- [ ] ✅ Pipeline runs successfully
-- [ ] ✅ Data visible in target tables
-- [ ] ✅ Row counts match expectations
-- [ ] ✅ Documentation updated for your team
+- [ ] UC connection `airtable` exists
+- [ ] Code in Databricks Repos (not Workspace)
+- [ ] DLT pipeline path starts with `/Repos/`
+- [ ] NO configuration keys added to pipeline
+- [ ] Pipeline runs successfully
+- [ ] Data visible in target tables
+- [ ] Row counts match Airtable
 
 ---
 
-## 🎯 **Next Steps After Deployment**
+## 📞 **Getting Help**
 
-1. **Productionize:**
-   - Move to production catalog/schema
-   - Set up automated scheduling
-   - Configure alerting/monitoring
-   - Add data quality checks
+If issues persist:
 
-2. **Optimize:**
-   - Review query performance
-   - Add partitioning if needed
-   - Optimize cluster size
-   - Enable Auto Loader for incremental loads
+**1. Check Setup:**
+```sql
+-- Verify UC connection
+DESCRIBE CONNECTION airtable;
 
-3. **Extend:**
-   - Add more Airtable tables
-   - Implement CDC (Change Data Capture)
-   - Add transformations in downstream tables
-   - Build downstream analytics/reports
+-- Check tables
+SHOW TABLES IN main.default;
+```
+
+**2. Review Logs:**
+- DLT UI → Event Log tab
+- Look for Python tracebacks
+
+**3. Contact Expert:**
+> "Using official Lakeflow pattern with UC connection.
+> Local testing passes.
+> 
+> Current error: [paste error]
+> 
+> Setup:
+> - UC connection: airtable (DESCRIBE shows it exists)
+> - Code location: /Repos/.../airtable-lakeflow-connector/
+> - DLT pipeline: [link]
+> - No explicit credentials configured (as required)
+> 
+> Can you help troubleshoot?"
 
 ---
 
-**🎉 You're all set! Your Airtable data should now be flowing into Databricks!**
+## 🎯 **Key Takeaways**
+
+1. ✅ **UC Connection** = Single source of truth for credentials
+2. ✅ **Databricks Repos** = Proper serialization and packages
+3. ✅ **Official Pattern** = `spark.read.format("lakeflow_connect")`
+4. ✅ **No Explicit Credentials** = Anywhere!
+5. ✅ **Automatic Injection** = Via Spark Data Source API
+
+---
+
+**🎉 You're ready! Sync your Databricks Repo and run the pipeline!**
