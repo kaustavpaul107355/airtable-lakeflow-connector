@@ -78,7 +78,11 @@ class AirtableLakeflowConnector(LakeflowConnect):
         Returns:
             List of table names
         """
-        url = f"{self.base_url}/v0/meta/bases/{self.base_id}/tables"
+        # Strip trailing slash and /v0 if present to avoid duplication
+        base_url = self.base_url.rstrip('/')
+        if base_url.endswith('/v0'):
+            base_url = base_url[:-3]
+        url = f"{base_url}/v0/meta/bases/{self.base_id}/tables"
         
         for attempt in range(self.max_retries):
             try:
@@ -102,7 +106,11 @@ class AirtableLakeflowConnector(LakeflowConnect):
         Returns:
             StructType representing the table schema
         """
-        url = f"{self.base_url}/v0/meta/bases/{self.base_id}/tables"
+        # Strip trailing slash and /v0 if present to avoid duplication
+        base_url = self.base_url.rstrip('/')
+        if base_url.endswith('/v0'):
+            base_url = base_url[:-3]
+        url = f"{base_url}/v0/meta/bases/{self.base_id}/tables"
         
         for attempt in range(self.max_retries):
             try:
@@ -174,7 +182,11 @@ class AirtableLakeflowConnector(LakeflowConnect):
         Returns:
             (records_iterator, next_offset)
         """
-        url = f"{self.base_url}/v0/{self.base_id}/{table_name}"
+        # Strip trailing slash and /v0 if present to avoid duplication
+        base_url = self.base_url.rstrip('/')
+        if base_url.endswith('/v0'):
+            base_url = base_url[:-3]
+        url = f"{base_url}/v0/{self.base_id}/{table_name}"
         params = {"pageSize": self.batch_size}
         
         # Add filter if starting from offset
