@@ -1,85 +1,85 @@
 # Airtable Lakeflow Connector - Changelog
 
-## [v1.2.0] - 2026-01-08
+## [v1.3.0 - Final] - 2026-01-09
 
-### Workspace Deployment - Production Ready
+### Ready for Expert Review
 
-**Major Update:** Complete solution for Workspace deployment using official Lakeflow UI tool.
+**Status:** Implementation complete, deployment blocked by serialization issue.
 
-**What's New:**
-- ✅ **Official UI Tool Support** - Deploy via +New → Community connectors
-- ✅ **Workspace Deployment** - Works without Repos access
-- ✅ **Robust Credential Retrieval** - Multiple fallback methods for UC connection
-- ✅ **Enhanced sys.path Setup** - Reliable imports in /Workspace/ folders
-- ✅ **Better Error Handling** - Clear messages at every step
-- ✅ **Complete Documentation** - WORKSPACE_DEPLOYMENT.md with step-by-step guide
+**What's Complete:**
+- ✅ Connector implementation (`sources/airtable/airtable.py`)
+- ✅ Framework integration (`pipeline/ingestion_pipeline.py`)
+- ✅ Local testing (all tests pass)
+- ✅ Documentation (comprehensive)
+- ✅ Follows official Lakeflow pattern per expert guidance
 
-**How It Works:**
-1. Official Lakeflow UI tool clones GitHub repo to /Workspace/
-2. `ingest.py` sets up Python paths for /Workspace/ compatibility
-3. Credentials retrieved from UC via SQL query (2 fallback methods)
-4. Connector runs on driver only (no serialization to workers)
-5. `@dlt.table` decorators define tables
-6. Simple data distributed to workers (no complex objects)
+**Current Issue:**
+- ❌ Serialization error when deployed to `/Workspace/`
+- Error: `ModuleNotFoundError: No module named 'pipeline'`
+- Root cause: Python Data Source API serialization fails in `/Workspace/`
+- See `CURRENT_ISSUE.md` for detailed analysis
+
+**Expert Guidance Implemented:**
+1. ✅ "Connector should not access UC connection" - Connector receives credentials from Spark engine
+2. ✅ "UC integration handled by template and engine" - Framework uses `spark.read.format("lakeflow_connect")`
+3. ✅ "UC connection supports arbitrary key-value pairs" - Connection stores all required options
 
 **Files Changed:**
-- `ingest.py` - Complete rewrite for Workspace deployment
-- `WORKSPACE_DEPLOYMENT.md` - NEW: Complete deployment guide
-- `README.md` - Updated for v1.2.0 and Workspace deployment
+- `README.md` - Updated for expert review submission
+- `CURRENT_ISSUE.md` - NEW: Detailed issue documentation
 - `CHANGELOG.md` - This file
+- `docs/WORKSPACE_DEPLOYMENT.md` - Moved from root (consolidated)
 
-**Deployment Methods:**
-1. **Official UI Tool** (Recommended): +New → Community connectors → Point to GitHub
-2. **Manual Upload**: Upload files to /Workspace/ and create DLT pipeline
+**Questions for Experts:**
+1. Is `/Repos/` deployment required for official pattern?
+2. How to make `/Workspace/` deployment work?
+3. Should we use wheel packaging?
+4. Any other deployment approach?
 
-**Key Benefits:**
-- ✅ No Repos access required
-- ✅ No explicit credentials
-- ✅ No serialization issues
-- ✅ Works with official Lakeflow UI tool
-- ✅ Comprehensive error handling
+---
+
+## [v1.2.0] - 2026-01-08
+
+### Workspace Deployment Attempt
+
+**Changes:**
+- Attempted simplified pattern to bypass serialization
+- Added sys.path manipulation for `/Workspace/`
+- Multiple credential retrieval methods
+- Enhanced error handling
+
+**Result:** Still encountered serialization issues with official pattern.
+
+**Learning:** Official pattern requires proper Python packaging that `/Workspace/` doesn't provide.
 
 ---
 
 ## [v1.1.0] - 2026-01-08
 
-### Official Lakeflow Pattern Restoration
+### Official Pattern Restoration
 
-**Critical Change:** Reverted to official Lakeflow pattern that uses UC connection automatically.
+**Changes:**
+- Restored official pattern using `pipeline/ingestion_pipeline.py`
+- Removed manual UC credential queries
+- Framework handles UC integration via Spark engine
 
-**What Changed:**
-- ✅ Restored `ingest.py` to use official pattern
-- ✅ Credentials automatically retrieved from UC connection (NO explicit access)
-- ✅ NO `spark.conf.get()` for credentials
-- ✅ NO Databricks secrets configuration
-- ✅ NO pipeline configuration for credentials
-
-**Why:**
-- User requirement: Zero explicit credentials anywhere in code or configuration
-- Official Lakeflow pattern handles credential injection automatically via Spark Data Source API
-- Simpler, cleaner, more secure
-
-**Files Changed:**
-- `ingest.py` - Restored official pattern
-- `docs/DEPLOYMENT.md` - Updated to reflect automatic credential handling
-- Removed `SIMPLIFIED_PATTERN.md` (violated requirement)
+**Key Insight:** Per expert guidance, connector should never access UC directly.
 
 ---
 
-### Table Name Sanitization (v1.0.1)
+## [v1.0.1] - 2026-01-08
 
-**Problem:** Table names with spaces, special characters, or starting with numbers caused SQL parsing errors.
+### Table Name Sanitization
 
-**Solution:** Centralized `sanitize_table_name()` function with comprehensive logic:
+**Problem:** Table names with spaces/special characters caused SQL parsing errors.
 
-**Sanitization Rules:**
+**Solution:** Centralized `sanitize_table_name()` function.
+
+**Rules:**
 1. Convert to lowercase
 2. Replace spaces, hyphens with underscores
-3. Remove parentheses, brackets, braces
-4. Remove special characters (keep only alphanumeric + underscore)
-5. Replace multiple underscores with single underscore
-6. Remove leading/trailing underscores
-7. Prepend 'table_' if starts with digit
+3. Remove special characters
+4. Handle leading digits
 
 **Examples:**
 | Input | Output |
@@ -87,17 +87,6 @@
 | `Packaging Tasks` | `packaging_tasks` |
 | `Creative Requests` | `creative_requests` |
 | `My-Table (2024)` | `my_table_2024` |
-| `123StartWithNumber` | `table_123startwithnumber` |
-
-**Files Changed:**
-- `libs/spec_parser.py` - Added `sanitize_table_name()` function
-- `pipeline/ingestion_pipeline.py` - Uses centralized sanitization
-
-**Impact:**
-- ✅ View names: All auto-generated staging views use sanitized names
-- ✅ Destination tables: Default table names sanitized when not explicitly specified
-- ✅ Consistency: Same sanitization logic everywhere
-- ✅ Edge cases: Handles all special characters, numbers, spaces
 
 ---
 
@@ -105,202 +94,158 @@
 
 ### Initial Production Release
 
-#### 1. DLT Integration - Declarative Pipeline Pattern
-**Problem:** DLT pipeline failed with `[NO_TABLES_IN_PIPELINE]` error.
+#### Major Features
 
-**Root Cause:** Custom `ingestion_pipeline.py` used imperative Spark operations instead of DLT's required declarative pattern.
+1. **DLT Integration**
+   - Official SDP (Spark Declarative Pipeline) pattern
+   - `@sdp.view()` decorators
+   - CDC, SCD Type 1/2, append-only support
 
-**Fix:**
-- Replaced custom implementation with official SDP (Spark Declarative Pipeline) pattern
-- Added `@sdp.view()` decorators for DLT table recognition
-- Implemented proper DLT functions:
-  - `_create_cdc_table()` with `sdp.apply_changes()`
-  - `_create_snapshot_table()` with `sdp.apply_changes_from_snapshot()`
-  - `_create_append_table()` with `@sdp.append_flow()`
+2. **Metadata Handling**
+   - Query `_lakeflow_metadata` table
+   - Graceful fallback to defaults
+   - Override via `table_configuration`
 
-**Files Changed:**
-- `pipeline/ingestion_pipeline.py` - Replaced with official implementation
-- `libs/spec_parser.py` - Added official SpecParser from Databricks Labs
-- `ingest.py` - Updated spec format to match SpecParser
+3. **API URL Normalization**
+   - Strip trailing `/` and `/v0`
+   - Prevent URL duplication
 
----
+4. **Import Path Corrections**
+   - Fixed: `libs.common.source_loader` (not `libs.source_loader`)
+   - Standardized directory structure
 
-#### 2. Metadata Query Error Fix
-**Problem:** `[DATA_SOURCE_OPTION_NOT_ALLOWED_BY_CONNECTION] Option get_metadata is not allowed` error.
-
-**Root Cause:** Official ingestion pipeline tried to use `get_metadata=true` option, which isn't supported by UC connections.
-
-**Fix:**
-- Changed metadata query to use the metadata table (`_lakeflow_metadata`)
-- Added graceful fallback to default values when metadata not available
-- Default behavior: snapshot ingestion with "id" as primary key
-- Metadata can be overridden in pipeline spec via `table_configuration`
-
-**Files Changed:**
-- `pipeline/ingestion_pipeline.py` - Updated `_get_table_metadata()` to query metadata table
+5. **Pipeline Spec Format**
+   - Per-table settings (not global defaults)
+   - Each table specifies catalog, schema, table name
 
 ---
 
-#### 3. API URL Normalization
-**Problem:** API requests failing with 404 errors due to URL path duplication (e.g., `/v0/v0/...`).
+## Features Summary
 
-**Root Cause:** Unity Catalog connections may include `/v0` in the base URL, causing duplication when constructing API endpoints.
+### Connector Features
+- ✅ Table Discovery - Automatically discover tables in Airtable base
+- ✅ Schema Inference - Map Airtable field types to Spark types
+- ✅ Delta Lake Integration - Write to Unity Catalog tables
+- ✅ Column Sanitization - Handle special characters
+- ✅ Table Name Sanitization - Auto-sanitize names with spaces/special chars
+- ✅ Retry Logic - Exponential backoff for API failures
+- ✅ Incremental Sync - `createdTime`-based incremental reads
+- ✅ SCD Support - Type 1 and Type 2 slowly changing dimensions
+- ✅ Unity Catalog - Secure credential management (engine-handled)
+- ✅ DLT Compatible - Full Delta Live Tables integration
+- ✅ Local Testing - Validate connector logic independently
 
-**Fix:**
-- Added URL normalization in connector methods
-- Strip trailing `/` and `/v0` before constructing API endpoints
-- Applied to: `list_tables()`, `get_table_schema()`, `read_table()`
-
-**Files Changed:**
-- `sources/airtable/airtable.py` - Added base_url normalization
-
----
-
-#### 4. Import Path Corrections
-**Problem:** `ModuleNotFoundError: No module named 'libs.source_loader'` errors in Databricks.
-
-**Root Cause:** Incorrect import paths - should be `libs.common.source_loader`.
-
-**Fix:**
-- Corrected import statements across codebase
-- Standardized directory structure
-
-**Files Changed:**
-- `ingest.py` - Fixed import from `libs.common.source_loader`
-- `ingest_local.py` - Fixed import paths for local testing
+### Framework Compliance
+- ✅ Implements `LakeflowConnect` interface
+- ✅ No UC connection access in connector
+- ✅ Framework handles UC integration
+- ✅ Uses official SDP pattern
+- ✅ Supports Unity Catalog connections
+- ✅ Proper error handling and logging
 
 ---
 
-#### 5. Pipeline Spec Format Update
-**Problem:** Validation errors for missing fields (`default_catalog`, `default_schema`, `base_id`).
+## Known Limitations
 
-**Root Cause:** Spec format didn't match official SpecParser requirements.
-
-**Fix:**
-- Updated to official pipeline spec format
-- Moved global defaults to per-table settings
-- Each table now specifies: `destination_catalog`, `destination_schema`, `destination_table`
+1. **Deployment:** Serialization error in `/Workspace/` (needs expert guidance)
+2. **Metadata API:** Doesn't implement `get_metadata` option (uses fallback)
+3. **Incremental Sync:** Based on `createdTime` only
+4. **Nested Objects:** Complex Airtable types flatten to JSON strings
 
 ---
 
-#### 6. Codebase Cleanup & Consolidation
-**Actions Taken:**
-- Removed stale documentation files
-- Consolidated all fixes into this CHANGELOG.md
-- Kept essential documentation in `docs/` directory:
-  - `DEPLOYMENT.md`
-  - `LOCAL_TESTING.md`
-  - `TROUBLESHOOTING.md`
+## Configuration
+
+### Unity Catalog Connection
+```sql
+CREATE CONNECTION IF NOT EXISTS airtable
+TYPE GENERIC_LAKEFLOW_CONNECT
+OPTIONS (
+  sourceName 'airtable',
+  bearer_token 'your_token',
+  base_id 'your_base_id',
+  base_url 'https://api.airtable.com/v0'
+);
+```
+
+### Pipeline Specification
+```python
+pipeline_spec = {
+    "connection_name": "airtable",
+    "objects": [
+        {
+            "table": {
+                "source_table": "Table Name",
+                "destination_catalog": "main",
+                "destination_schema": "default",
+                "destination_table": "table_name",
+            }
+        }
+    ]
+}
+```
 
 ---
 
-### Features
-
-✅ **Table Discovery:** Automatically discover tables in Airtable base
-✅ **Schema Inference:** Map Airtable field types to Spark types
-✅ **Delta Lake Integration:** Write to Unity Catalog tables
-✅ **Column Sanitization:** Handle special characters in column names
-✅ **Table Name Sanitization:** Auto-sanitize table names with spaces/special chars
-✅ **Retry Logic:** Exponential backoff for API failures
-✅ **Incremental Sync:** Support for `createdTime`-based incremental reads
-✅ **Full Refresh:** Snapshot mode for complete data reload
-✅ **SCD Support:** Type 1 and Type 2 slowly changing dimensions
-✅ **Unity Catalog:** Secure credential management (automatic injection)
-✅ **DLT Compatible:** Full Delta Live Tables integration
-✅ **Local Testing:** Test connector logic outside Databricks
-✅ **Zero Explicit Credentials:** UC connection handles everything
-✅ **Workspace Deployment:** Works without Repos access
-
----
-
-### Known Limitations
-
-1. **Metadata API:** Connector doesn't implement `get_metadata` option (uses fallback defaults)
-2. **Incremental Sync:** Based on `createdTime` only (no custom cursor support yet)
-3. **Nested Objects:** Complex Airtable types flatten to JSON strings
-
----
-
-### Configuration Options
-
-#### In Unity Catalog Connection
-- `bearer_token` - Airtable Personal Access Token (required)
-- `base_id` - Airtable base ID (required)
-- `base_url` - API base URL (default: `https://api.airtable.com/v0`)
-
-#### In ingest.py (per table)
-- `source_table` - Table name in Airtable (required)
-- Destination is defined in `@dlt.table` decorator
-
----
-
-### Repository
+## Repository
 
 - **GitHub:** https://github.com/kaustavpaul107355/airtable-lakeflow-connector
 - **Branch:** main
 - **License:** Apache 2.0
+- **Framework:** https://github.com/databrickslabs/lakeflow-community-connectors
 
 ---
 
-### Credits
+## Version Summary
 
-Built on the Databricks Lakeflow Community Connectors framework.
-
-Reference: https://github.com/databrickslabs/lakeflow-community-connectors
-
----
-
-## Summary of Changes
-
-| Version | Key Changes |
-|---------|-------------|
-| **v1.2.0** | ✅ Workspace deployment, Official UI tool support, Robust credential retrieval |
-| **v1.1.0** | ✅ Restored official pattern (zero explicit credentials) |
-| **v1.0.1** | ✅ Added comprehensive table name sanitization |
-| **v1.0.0** | ✅ DLT integration, metadata fix, API normalization, spec updates |
+| Version | Status | Key Changes |
+|---------|--------|-------------|
+| **v1.3.0** | ✅ Ready for Review | Final documentation, issue analysis |
+| **v1.2.0** | ⚠️ Attempted | Workspace deployment attempts |
+| **v1.1.0** | ✅ Correct Pattern | Official pattern per expert guidance |
+| **v1.0.1** | ✅ Feature | Table name sanitization |
+| **v1.0.0** | ✅ Initial | Production release |
 
 ---
 
 ## Breaking Changes
 
-### v1.2.0
-- **Deployment Method:** Now optimized for Workspace deployment via official UI tool
-- **Pattern:** Simplified pattern (no Python Data Source serialization)
+### v1.3.0
+- **Documentation:** Restructured for expert review
+- **Issue:** Serialization error documented in CURRENT_ISSUE.md
 
 ### v1.1.0
-- **Credential Handling:** Removed all explicit credential access. UC connection now required.
+- **Credential Handling:** Removed all explicit UC access
+- **Pattern:** Must use official framework pattern
 
 ### v1.0.1
-- **Table Names:** Auto-sanitization may change default destination table names. Explicitly set `destination_table` if you need specific names.
+- **Table Names:** Auto-sanitization may change default names
 
 ### v1.0.0
-- **Pipeline Spec Format:** Changed from global defaults to per-table settings
-- **Import Paths:** Changed from `libs.source_loader` to `libs.common.source_loader`
-- **Ingestion Pipeline:** Now requires official SDP-based implementation
+- **Pipeline Spec:** Changed from global to per-table settings
+- **Import Paths:** Changed to `libs.common.source_loader`
 
 ---
 
 ## Migration Guide
 
-### To v1.2.0 (Current)
+### Current State (v1.3.0)
 
-1. **Ensure UC connection exists:**
-   ```sql
-   DESCRIBE CONNECTION airtable;
-   ```
+**For Experts Reviewing:**
+1. Clone repository: `https://github.com/kaustavpaul107355/airtable-lakeflow-connector`
+2. Review `CURRENT_ISSUE.md` for detailed problem analysis
+3. Local testing works: `python ingest_local.py`
+4. Deployment blocked: Serialization error in `/Workspace/`
 
-2. **Deploy via official UI tool:**
-   - +New → Add or upload data → Community connectors
-   - Point to GitHub: `https://github.com/kaustavpaul107355/airtable-lakeflow-connector`
-
-3. **Or manually upload to /Workspace/**
-   - Follow WORKSPACE_DEPLOYMENT.md
-
-4. **No configuration keys needed!**
+**Need Guidance On:**
+- Proper deployment method for official pattern
+- `/Repos/` vs `/Workspace/` requirements
+- Wheel packaging approach
+- Any missing framework requirements
 
 ---
 
-**Current Version:** v1.2.0  
-**Status:** Production Ready  
-**Pattern:** Simplified (No Serialization)  
-**Deployment:** Workspace (Official UI Tool)
+**Current Version:** v1.3.0 (Final - Ready for Expert Review)  
+**Status:** Implementation Complete, Deployment Blocked  
+**Contact:** kaustav.paul@databricks.com  
+**Date:** January 9, 2026

@@ -1,41 +1,69 @@
-# 🚀 Databricks Deployment Guide
+# Deployment Guide
 
-## ⚠️ **Important: See WORKSPACE_DEPLOYMENT.md**
+## ⚠️ Current Status
 
-This connector is designed for **Workspace deployment** using the official Databricks Lakeflow UI tool.
+This connector is **ready for expert review** but encounters a serialization error when deployed to `/Workspace/`.
 
-**For complete deployment instructions, see:**  
-**[../WORKSPACE_DEPLOYMENT.md](../WORKSPACE_DEPLOYMENT.md)**
-
----
-
-## 🎯 Quick Start
-
-### Method 1: Official Lakeflow UI Tool (Recommended)
-
-1. **In Databricks:** +New → Add or upload data → Community connectors
-
-2. **Enter GitHub URL:**
-   ```
-   https://github.com/kaustavpaul107355/airtable-lakeflow-connector
-   ```
-
-3. **Configure:**
-   - Source: UC connection `airtable`
-   - Tables: Select tables to ingest
-   - Destination: Your catalog and schema
-
-4. **Deploy & Run!**
+**For detailed issue analysis, see:** [../CURRENT_ISSUE.md](../CURRENT_ISSUE.md)
 
 ---
 
-### Method 2: Manual Workspace Upload
+## 🧪 Local Testing - ✅ Works
 
-If you need to manually upload files:
+The connector has been fully validated locally:
 
-1. Upload complete directory structure to `/Workspace/Users/your.name@databricks.com/airtable-connector/`
-2. Create DLT pipeline via UI
-3. Point to `ingest.py` in your Workspace folder
+```bash
+cd airtable-connector
+./setup_local_test.sh
+source venv/bin/activate
+python ingest_local.py
+```
+
+**Result:**
+```
+✅ Connection test passed
+✅ Table discovery passed (3 tables found)
+✅ Schema inference passed
+✅ Data read passed (50+ records)
+```
+
+**See:** [LOCAL_TESTING.md](./LOCAL_TESTING.md) for detailed instructions.
+
+---
+
+## 🚀 Databricks Deployment - ❌ Blocked
+
+### Attempted Methods
+
+#### Method 1: Official Lakeflow UI Tool
+```
++New → Add or upload data → Community connectors
+→ Point to GitHub repo
+→ UI tool deploys to /Workspace/
+→ ❌ Result: ModuleNotFoundError: No module named 'pipeline'
+```
+
+#### Method 2: Manual /Workspace/ Upload
+```
+Upload complete directory structure to /Workspace/
+→ Create DLT pipeline via UI
+→ Point to ingest.py
+→ ❌ Result: Same serialization error
+```
+
+### Root Cause
+
+**Python Data Source API Serialization:**
+- Official pattern uses `spark.read.format("lakeflow_connect")`
+- Spark serializes connector + all imports to workers
+- Workers can't resolve `pipeline`, `libs`, `sources` modules in `/Workspace/`
+- This appears to be a Databricks platform limitation
+
+**Error:**
+```
+pyspark.serializers.SerializationError
+ModuleNotFoundError: No module named 'pipeline'
+```
 
 ---
 
@@ -51,7 +79,8 @@ OPTIONS (
   bearer_token 'your_airtable_token',
   base_id 'your_base_id',
   base_url 'https://api.airtable.com/v0'
-);
+)
+COMMENT 'Airtable API connection for Lakeflow Community Connector';
 ```
 
 **Verify:**
@@ -60,67 +89,68 @@ SHOW CONNECTIONS;
 DESCRIBE CONNECTION airtable;
 ```
 
----
+### 2. Code Repository
 
-## ✅ Key Points
-
-- ✅ **Works in /Workspace/** - No Repos access required
-- ✅ **Zero explicit credentials** - Retrieved from UC connection automatically
-- ✅ **No serialization** - Connector runs on driver only
-- ✅ **Official UI compatible** - Deploy via Databricks Lakeflow UI tool
-- ✅ **No configuration keys** - UC connection handles everything
+**GitHub:** https://github.com/kaustavpaul107355/airtable-lakeflow-connector
 
 ---
 
-## 🐛 Troubleshooting
+## 🤔 Questions for Experts
 
-### Error: `ModuleNotFoundError: No module named 'sources'`
+### 1. Deployment Location
+- Does the official pattern require `/Repos/` deployment?
+- Can `/Workspace/` deployment work with proper configuration?
 
-**Cause:** Missing files or incorrect directory structure
+### 2. Packaging
+- Should connector be packaged as a wheel file?
+- How to handle Python module resolution for workers?
 
-**Fix:** Ensure all files uploaded (see WORKSPACE_DEPLOYMENT.md Step 1)
+### 3. UI Tool
+- Are there specific UI tool settings we're missing?
+- Does UI tool expect different file structure?
 
----
-
-### Error: `Cannot retrieve UC connection credentials`
-
-**Cause:** UC connection not accessible
-
-**Fix:**
-1. Verify connection exists: `SHOW CONNECTIONS;`
-2. Check connection details: `DESCRIBE CONNECTION airtable;`
-3. Verify you have `USE CONNECTION` permission
-
----
-
-### Error: `404 Not Found` from Airtable API
-
-**Cause:** Wrong base_id or table names
-
-**Fix:**
-1. Verify base_id in UC connection
-2. Check table names match exactly (case-sensitive)
-3. Test locally first: `python ingest_local.py`
+### 4. Alternative Approaches
+- Is there a different deployment method for `/Workspace/`?
+- Any framework requirements we're missing?
 
 ---
 
-## 📖 Complete Documentation
+## 📖 Additional Documentation
 
-For detailed step-by-step instructions, see:
-
-- **[WORKSPACE_DEPLOYMENT.md](../WORKSPACE_DEPLOYMENT.md)** - Complete deployment guide
-- **[LOCAL_TESTING.md](./LOCAL_TESTING.md)** - Local testing guide
-- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Common issues & solutions
-- **[CHANGELOG.md](../CHANGELOG.md)** - Version history
-
----
-
-## 🔗 Quick Links
-
-- **GitHub:** https://github.com/kaustavpaul107355/airtable-lakeflow-connector
-- **Databricks Lakeflow:** https://github.com/databrickslabs/lakeflow-community-connectors
-- **Airtable API:** https://airtable.com/developers/web/api/introduction
+| Document | Description |
+|----------|-------------|
+| **[CURRENT_ISSUE.md](../CURRENT_ISSUE.md)** | Detailed issue analysis for experts |
+| **[LOCAL_TESTING.md](./LOCAL_TESTING.md)** | Local testing guide (works perfectly) |
+| **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** | Common issues & solutions |
+| **[WORKSPACE_DEPLOYMENT.md](./WORKSPACE_DEPLOYMENT.md)** | Attempted workspace deployment steps |
+| **[README.md](../README.md)** | Project overview |
+| **[CHANGELOG.md](../CHANGELOG.md)** | Complete version history |
 
 ---
 
-**For complete deployment instructions with screenshots and troubleshooting, see [WORKSPACE_DEPLOYMENT.md](../WORKSPACE_DEPLOYMENT.md)**
+## ✅ What's Ready
+
+1. **✅ Connector Implementation** - Fully functional (local tests pass)
+2. **✅ Framework Integration** - Follows official pattern
+3. **✅ UC Integration** - Correct pattern (no UC access in connector)
+4. **✅ Documentation** - Comprehensive guides
+5. **❌ Deployment** - Blocked by serialization issue
+
+---
+
+## 🙏 Need Expert Guidance
+
+The connector is **complete and correct** per the official framework, but we need guidance on:
+
+1. Proper deployment method for the official pattern
+2. How to handle `/Workspace/` vs `/Repos/` requirements
+3. Whether wheel packaging is needed
+4. Any missing configuration or setup steps
+
+**Please see [CURRENT_ISSUE.md](../CURRENT_ISSUE.md) for detailed analysis and specific questions.**
+
+---
+
+**Contact:** kaustav.paul@databricks.com  
+**Repository:** https://github.com/kaustavpaul107355/airtable-lakeflow-connector  
+**Status:** Ready for Expert Review
